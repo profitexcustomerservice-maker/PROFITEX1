@@ -1,0 +1,281 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Deposits Approval</h1>
+    <p class="page-subtitle">Review and approve deposit requests</p>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <select id="filter-status" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <option value="">All Status</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+            </select>
+            <input type="text" id="search-deposits" placeholder="Search by user..." style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); width: 250px;">
+        </div>
+        <button onclick="loadDeposits()">Refresh</button>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Reference</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="deposits-table-body">
+                <tr>
+                    <td colspan="7">
+                        <div class="loading">Loading...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pagination" class="pagination" style="margin-top: 20px;"></div>
+</div>
+
+<!-- Deposit Details Modal -->
+<div id="deposit-details-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: white; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">Deposit Details</h2>
+            <span onclick="closeDepositModal()" style="color: #aaa; font-size: 28px; cursor: pointer;">&times;</span>
+        </div>
+        
+        <div style="border-top: 1px solid #eee; padding-top: 15px;">
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Deposit ID:</strong>
+                <div id="detail-deposit-id" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">User:</strong>
+                <div id="detail-deposit-user" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Amount:</strong>
+                <div id="detail-deposit-amount" style="color: #333; font-weight: bold;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Payment Method:</strong>
+                <div id="detail-deposit-payment-method" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Network:</strong>
+                <div id="detail-deposit-network" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Transaction Hash:</strong>
+                <div id="detail-deposit-tx-hash" style="color: #333; word-break: break-all; font-size: 0.85rem;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Status:</strong>
+                <div id="detail-deposit-status" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Date Created:</strong>
+                <div id="detail-deposit-created" style="color: #333;">-</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: right;">
+            <button onclick="closeDepositModal()" style="padding: 8px 16px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.pagination button {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.pagination button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.pagination button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+</style>
+
+<script>
+let allDepositsData = [];
+
+window.addEventListener('DOMContentLoaded', () => {
+    // deposits.html reuses the crypto_deposits_json context variable
+    try {
+        allDepositsData = JSON.parse('{{ deposits_json|escapejs }}');
+    } catch(e) {
+        allDepositsData = [];
+    }
+    renderDeposits(allDepositsData);
+});
+
+async function loadDeposits() {
+    const status = document.getElementById('filter-status').value;
+    try {
+        const url = `/admin_panel/api/crypto-deposits/${status ? '?status=' + status : ''}`;
+        const response = await apiFetch(url);
+        if (response.ok) {
+            const data = await response.json();
+            allDepositsData = data.results || data;
+            renderDeposits(allDepositsData);
+        } else {
+            showToast('Error loading deposits', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading deposits:', error);
+        showToast('Error loading deposits', 'error');
+    }
+}
+
+function renderDeposits(data) {
+    const container = document.getElementById('deposits-table-body');
+    
+    if (!data || data.length === 0) {
+        container.innerHTML = '<tr><td colspan="7"><div class="no-data">No deposits found</div></td></tr>';
+        return;
+    }
+
+    container.innerHTML = data.map(deposit => `
+        <tr>
+            <td>
+                <div style="font-weight: 600;">${deposit.user_email || deposit.username || 'User #' + deposit.user}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">ID: ${deposit.id || 'N/A'}</div>
+            </td>
+            <td>
+                <div style="font-weight: 700; color: var(--success);">$${deposit.amount ? parseFloat(deposit.amount).toFixed(2) : '0.00'}</div>
+            </td>
+            <td>${deposit.payment_method_name || deposit.method || 'Crypto'}</td>
+            <td>
+                <div style="font-family: monospace; font-size: 0.8rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" title="${deposit.transaction_hash || ''}">
+                    ${deposit.transaction_hash ? deposit.transaction_hash.substring(0, 20) + '...' : 'N/A'}
+                </div>
+            </td>
+            <td>
+                <span class="badge ${getStatusBadgeClass(deposit.status)}">
+                    ${deposit.status || 'PENDING'}
+                </span>
+            </td>
+            <td>${deposit.created_at ? formatDate(deposit.created_at) : 'N/A'}</td>
+            <td>
+                <div style="display: flex; gap: 8px;">
+                    ${deposit.status === 'PENDING' ? `
+                        <button onclick="approveDeposit('${deposit.id}')" class="success" style="padding: 6px 12px; font-size: 0.75rem;">Approve</button>
+                        <button onclick="rejectDeposit('${deposit.id}')" class="danger" style="padding: 6px 12px; font-size: 0.75rem;">Reject</button>
+                    ` : `
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">Processed</span>
+                    `}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function approveDeposit(depositId) {
+    if (!confirm('Are you sure you want to approve this deposit?')) return;
+
+    try {
+        const response = await apiFetch(`/admin_panel/api/crypto-deposits/${depositId}/approve/`, { method: 'POST' });
+        if (response.ok) {
+            showToast('Deposit approved successfully', 'success');
+            loadDeposits();
+        } else {
+            const err = await response.json().catch(() => ({}));
+            showToast(err.detail || err.error || 'Error approving deposit', 'error');
+        }
+    } catch (error) {
+        console.error('Error approving deposit:', error);
+        showToast('Error approving deposit', 'error');
+    }
+}
+
+async function rejectDeposit(depositId) {
+    if (!confirm('Are you sure you want to reject this deposit?')) return;
+
+    try {
+        const response = await apiFetch(`/admin_panel/api/crypto-deposits/${depositId}/reject/`, { method: 'POST' });
+        if (response.ok) {
+            showToast('Deposit rejected successfully', 'success');
+            loadDeposits();
+        } else {
+            const err = await response.json().catch(() => ({}));
+            showToast(err.detail || err.error || 'Error rejecting deposit', 'error');
+        }
+    } catch (error) {
+        console.error('Error rejecting deposit:', error);
+        showToast('Error rejecting deposit', 'error');
+    }
+}
+
+function viewDepositDetails(depositId) {
+    const deposit = allDepositsData.find(d => String(d.id) === String(depositId));
+    if (!deposit) {
+        showToast('Deposit not found', 'error');
+        return;
+    }
+    
+    document.getElementById('detail-deposit-id').textContent = deposit.id;
+    document.getElementById('detail-deposit-user').textContent = deposit.username || 'N/A';
+    document.getElementById('detail-deposit-amount').textContent = `$${parseFloat(deposit.amount).toFixed(2)}`;
+    document.getElementById('detail-deposit-payment-method').textContent = deposit.payment_method_name || 'N/A';
+    document.getElementById('detail-deposit-network').textContent = deposit.payment_method_network || 'N/A';
+    document.getElementById('detail-deposit-tx-hash').textContent = deposit.transaction_hash || 'N/A';
+    document.getElementById('detail-deposit-status').textContent = (deposit.status || 'PENDING').toUpperCase();
+    document.getElementById('detail-deposit-created').textContent = deposit.created_at ? formatDate(deposit.created_at) : 'N/A';
+    
+    document.getElementById('deposit-details-modal').style.display = 'block';
+}
+
+function closeDepositModal() {
+    document.getElementById('deposit-details-modal').style.display = 'none';
+}
+
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('deposit-details-modal');
+    if (event.target === modal) {
+        closeDepositModal();
+    }
+});
+
+function getStatusBadgeClass(status) {
+    const s = (status || '').toUpperCase();
+    if (s === 'PENDING') return 'warning';
+    if (s === 'APPROVED') return 'success';
+    if (s === 'REJECTED') return 'danger';
+    return 'info';
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+</script>
+{% endblock %}

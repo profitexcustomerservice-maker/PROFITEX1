@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  web:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    command: daphne -b 0.0.0.0 -p 8000 novaprofit.asgi:application
+
+  celery:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: celery -A novaprofit worker -l info
+
+  celery-beat:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    command: celery -A novaprofit beat -l info
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  db:
+    image: mysql:8.1
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: novaprofit_db
+      MYSQL_USER: novaprofit
+      MYSQL_PASSWORD: strong_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

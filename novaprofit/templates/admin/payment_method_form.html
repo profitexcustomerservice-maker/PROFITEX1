@@ -1,0 +1,64 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if mode == 'create' %}Add New Wallet{% else %}Edit Wallet{% endif %}</h1>
+    <p class="page-subtitle">{% if mode == 'create' %}Configure a new crypto wallet address{% else %}Update wallet details{% endif %}</p>
+</div>
+
+<div class="card">
+    <form method="post" style="max-width: 600px;">
+        {% csrf_token %}
+        {% if error %}
+        <div class="alert alert-error" style="padding: 12px; background: #fee; border: 1px solid #fcc; border-radius: 6px; margin-bottom: 20px; color: #c33;">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Name (e.g., USDT, BTC, ETH)</label>
+            <input type="text" 
+                   name="name" 
+                   value="{% if payment_method %}{{ payment_method.name }}{% endif %}" 
+                   required 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Network (e.g., TRC20, ERC20, BTC)</label>
+            <input type="text" 
+                   name="network" 
+                   value="{% if payment_method %}{{ payment_method.network }}{% endif %}" 
+                   required 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Wallet Address</label>
+            <input type="text" 
+                   name="wallet_address" 
+                   value="{% if payment_method %}{{ payment_method.wallet_address }}{% endif %}" 
+                   required 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: monospace;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                <input type="checkbox" 
+                       name="is_active" 
+                       {% if payment_method and payment_method.is_active %}checked{% elif not payment_method %}checked{% endif %}>
+                Active
+            </label>
+            <p style="margin-top: 8px; color: #666; font-size: 0.9rem;">If unchecked, users will not see this payment option.</p>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="primary" style="flex: 1;">
+                {% if mode == 'create' %}Create Wallet{% else %}Update Wallet{% endif %}
+            </button>
+            <a href="{% url 'payment_method_list' %}" style="flex: 1; text-align: center; padding: 12px; background: #f5f5f5; color: #333; border: 1px solid #ddd; border-radius: 6px; text-decoration: none;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.wallet-container {
+    padding: 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.wallet-header {
+    margin-bottom: 32px;
+}
+
+.wallet-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.wallet-header p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.125rem;
+}
+
+.balance-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    padding: 40px;
+    color: white;
+    text-align: center;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.balance-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+}
+
+.balance-icon {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.balance-amount {
+    font-size: 4rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.balance-label {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.plan-info {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    position: relative;
+    z-index: 1;
+}
+
+.plan-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 20px;
+    border-radius: 24px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.transactions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.transaction-form-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+}
+
+.transaction-form-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.transaction-form-card p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    margin-bottom: 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.action-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.response-message {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    display: none;
+}
+
+.response-message.show { display: block; }
+.response-message.success { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.response-message.error { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+.transactions-section {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 32px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.transaction-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #667eea;
+}
+
+.transaction-amount.positive { color: #10b981; }
+.transaction-amount.negative { color: #ef4444; }
+
+.crypto-card:hover { border-color: #667eea !important; }
+</style>
+
+<div class="wallet-container">
+    <div class="wallet-header">
+        <h1>Wallet</h1>
+        <p>Manage your crypto deposits, withdrawals, and track your history.</p>
+    </div>
+
+    <!-- Balance Card -->
+    <div class="balance-card">
+        <div class="balance-icon"><i class="fas fa-wallet"></i></div>
+        <div class="balance-amount">${{ balance }}</div>
+        <div class="balance-label">Available Portfolio Balance</div>
+        
+        {% if user.current_plan_level %}
+        <div class="plan-info">
+            <span class="plan-badge">Plan {{ user.current_plan_level }} Active</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="transactions-grid">
+        <!-- Crypto Deposit Form -->
+        <div class="transaction-form-card">
+            <h3 style="margin-bottom:15px;">Deposit Crypto</h3>
+            <p>Secure blockchain deposits for instant plan activation</p>
+            
+            <div id="crypto-methods-list" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto; padding-bottom:10px;">
+                {% for method in payment_methods %}
+                <div onclick="selectMethod({{ method.id }})" class="crypto-card" style="min-width:110px; background:rgba(255,255,255,0.05); padding:16px; border-radius:16px; cursor:pointer; text-align:center; border:2px solid rgba(255,255,255,0.1); transition:all 0.3s;">
+                    <div style="font-weight:800; color:#667eea; font-size:1rem;">{{ method.name }}</div>
+                    <div style="font-size:0.65rem; opacity:0.6; margin-top:4px;">{{ method.network }}</div>
+                </div>
+                {% empty %}
+                <div style="padding:20px; text-align:center; opacity:0.5; width:100%;">No deposit methods available.</div>
+                {% endfor %}
+            </div>
+
+
+            <div id="selected-crypto-details" style="background:rgba(255,255,255,0.05); padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(255,255,255,0.1); display:none;">
+                <div id="address-card" style="text-align:center;">
+                    <img id="crypto-qr" src="" style="width:140px; height:140px; background:white; padding:8px; border-radius:12px; margin-bottom:16px; display:none;">
+                    <p style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-bottom:12px;">Transfer <span id="crypto-name-title"></span> to:</p>
+                    <div id="crypto-address-text" style="background:rgba(0,0,0,0.3); padding:16px; border-radius:12px; font-family:monospace; font-size:0.85rem; word-break:break-all; border:1px solid rgba(255,255,255,0.1); margin-bottom:16px; color:white;"></div>
+                    <button type="button" onclick="copyCryptoAddress()" style="background:#667eea; color:white; border:none; padding:10px 20px; border-radius:8px; font-size:0.85rem; cursor:pointer; font-weight:600;">Copy Address</button>
+                </div>
+
+                <form id="crypto-submit-form" style="margin-top:24px; border-top:1px solid rgba(255,255,255,0.1); padding-top:24px;">
+                    {% csrf_token %}
+                    <input type="hidden" id="crypto-method-id">
+                    <div class="form-group">
+                        <label>Amount Sent (USD Equivalent)</label>
+                        <input type="number" id="crypto-amount-sent" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Transaction Hash / ID</label>
+                        <input type="text" id="crypto-tx-hash" required placeholder="Enter TxHash">
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Proof (Screenshot)</label>
+                        <input type="file" id="crypto-proof-image" accept="image/*">
+                    </div>
+                    <button type="submit" class="action-btn">Confirm Transaction</button>
+                </form>
+            </div>
+            <div id="deposit-response" class="response-message"></div>
+        </div>
+
+        <!-- Withdrawal Form -->
+        <div class="transaction-form-card">
+            <h3>Withdraw Portfolio</h3>
+            <p>Withdraw your accrued earnings to your wallet</p>
+            
+            <form id="withdraw-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Withdrawal Amount ($)</label>
+                    <input id="withdraw-amount" type="number" min="60" step="0.01" placeholder="Minimum $60" required />
+                </div>
+                <div class="form-group">
+                    <label>Wallet Address</label>
+                    <input id="withdraw-wallet-address" type="text" placeholder="Enter your wallet address" required />
+                </div>
+                <button type="submit" class="action-btn">Request Payout</button>
+            </form>
+            <div id="withdraw-response" class="response-message"></div>
+        </div>
+    </div>
+    
+    <!-- Pending Crypto Requests -->
+    {% if crypto_deposits or withdrawals %}
+    <div class="transactions-section" style="margin-bottom:32px;">
+        <div class="section-header">
+            <h2>Pending Requests</h2>
+            <p style="font-size:0.875rem; color:rgba(255,255,255,0.5);">Awaiting manual verification</p>
+        </div>
+        <div class="transaction-list">
+            {% for crypto in crypto_deposits %}
+            <div class="transaction-item" style="border-left: 4px solid #6366f1;">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div class="transaction-icon"><i class="fab fa-bitcoin"></i></div>
+                    <div>
+                        <h4 style="font-weight:600;">Crypto Deposit ({{ crypto.payment_method.name }})</h4>
+                        <p style="font-size:0.75rem; opacity:0.6;">{{ crypto.created_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="transaction-amount" style="color:#6366f1; font-weight:700;">${{ crypto.amount }}</div>
+                    <span style="font-size:0.7rem; color:#6366f1; font-weight:700;">VERIFYING</span>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% for wdl in withdrawals %}
+            <div class="transaction-item" style="border-left: 4px solid #ef4444;">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div class="transaction-icon" style="color:#ef4444;"><i class="fas fa-arrow-up"></i></div>
+                    <div>
+                        <h4 style="font-weight:600;">Withdrawal Request</h4>
+                        <p style="font-size:0.75rem; opacity:0.6;">{{ wdl.requested_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="transaction-amount negative">-${{ wdl.amount }}</div>
+                    <span style="font-size:0.7rem; color:#ef4444; font-weight:700;">REVIEWING</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- History -->
+    <div class="transactions-section">
+        <div class="section-header">
+            <h2>Recent Activity</h2>
+            <a href="/transactions/" style="color:#667eea; text-decoration:none; font-size:0.875rem;">History →</a>
+        </div>
+        {% if transactions %}
+        <div class="transaction-list">
+            {% for transaction in transactions %}
+            <div class="transaction-item">
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div class="transaction-icon">
+                        <i class="fas fa-{% if transaction.amount > 0 %}arrow-down{% else %}arrow-up{% endif %}"></i>
+                    </div>
+                    <div>
+                        <h4 style="font-weight:600;">{{ transaction.transaction_type|title }}</h4>
+                        <p style="font-size:0.75rem; opacity:0.5;">{{ transaction.created_at|date:"M d, Y" }}</p>
+                    </div>
+                </div>
+                <div class="transaction-amount {% if transaction.amount > 0 %}positive{% else %}negative{% endif %}" style="font-weight:700;">
+                    {% if transaction.amount > 0 %}+{% endif %}${{ transaction.amount }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="text-align:center; padding:40px; opacity:0.5;">No transactions found.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+let currentMethods = [
+    {% for m in payment_methods %}
+    { id: {{ m.id }}, name: "{{ m.name|escapejs }}", network: "{{ m.network|escapejs }}", wallet_address: "{{ m.wallet_address|escapejs }}" }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+let selectedMethod = null;
+
+async function loadCryptoMethods() {
+
+    const list = document.getElementById('crypto-methods-list');
+    try {
+        const response = await apiFetch('/api/payment-methods/');
+        if (response.ok) {
+            let data = await response.json();
+            currentMethods = data.results || data;
+            list.innerHTML = currentMethods.map(m => `
+                <div onclick="selectMethod(${m.id})" class="crypto-card" style="min-width:110px; background:rgba(255,255,255,0.05); padding:16px; border-radius:16px; cursor:pointer; text-align:center; border:2px solid rgba(255,255,255,0.1); transition:all 0.3s;">
+                    <div style="font-weight:800; color:#667eea; font-size:1rem;">${m.name}</div>
+                    <div style="font-size:0.65rem; opacity:0.6; margin-top:4px;">${m.network}</div>
+                </div>
+            `).join('');
+        }
+    } catch (e) { console.error(e); }
+}
+
+function selectMethod(id) {
+    selectedMethod = currentMethods.find(m => m.id === id);
+    document.getElementById('selected-crypto-details').style.display = 'block';
+    document.getElementById('crypto-name-title').innerText = selectedMethod.name + ' (' + selectedMethod.network + ')';
+    document.getElementById('crypto-address-text').innerText = selectedMethod.wallet_address;
+    document.getElementById('crypto-method-id').value = id;
+    const qr = document.getElementById('crypto-qr');
+    if (selectedMethod.qr_code) { qr.src = selectedMethod.qr_code; qr.style.display = 'inline-block'; }
+    else { qr.style.display = 'none'; }
+    
+    document.querySelectorAll('.crypto-card').forEach(c => {
+        c.style.borderColor = 'rgba(255,255,255,0.1)';
+        c.style.background = 'rgba(255,255,255,0.05)';
+        if(c.innerText.includes(selectedMethod.name)) {
+            c.style.borderColor = '#667eea';
+            c.style.background = 'rgba(102,126,234,0.1)';
+        }
+    });
+}
+
+function copyCryptoAddress() {
+    const addr = document.getElementById('crypto-address-text').innerText;
+    navigator.clipboard.writeText(addr).then(() => {
+        const btn = event.target;
+        btn.innerText = 'Copied!';
+        setTimeout(() => btn.innerText = 'Copy Address', 2000);
+    });
+}
+
+document.getElementById('crypto-submit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const resp = document.getElementById('deposit-response');
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; btn.innerText = 'Verifying...';
+    
+    const formData = new FormData();
+    formData.append('amount', document.getElementById('crypto-amount-sent').value);
+    formData.append('transaction_hash', document.getElementById('crypto-tx-hash').value);
+    formData.append('payment_method', document.getElementById('crypto-method-id').value);
+    const file = document.getElementById('crypto-proof-image').files[0];
+    if(file) formData.append('proof_image', file);
+
+    try {
+        const response = await fetch('/api/crypto-deposits/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body: formData
+        });
+        if (response.ok) {
+            resp.innerText = 'Payment proof submitted successfully!';
+            resp.className = 'response-message show success';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            const data = await response.json();
+            resp.innerText = data.transaction_hash ? 'Error: ' + data.transaction_hash[0] : 'Submission failed';
+            resp.className = 'response-message show error';
+        }
+    } catch (err) { resp.innerText = 'Error connecting to server'; resp.className = 'response-message show error'; }
+    finally { btn.disabled = false; btn.innerText = 'Confirm Transaction'; }
+});
+
+document.getElementById('withdraw-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const resp = document.getElementById('withdraw-response');
+    const amount = document.getElementById('withdraw-amount').value;
+    const walletAddress = document.getElementById('withdraw-wallet-address').value;
+    try {
+        const r = await apiFetch('/api/withdrawals/', {
+            method: 'POST',
+            body: JSON.stringify({ amount, wallet_address: walletAddress })
+        });
+        if (r.ok) {
+            resp.innerText = 'Withdrawal requested!';
+            resp.className = 'response-message show success';
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            const d = await r.json();
+            resp.innerText = d.wallet_address || d.amount || 'Withdrawal failed';
+            resp.className = 'response-message show error';
+        }
+    } catch (e) { resp.innerText = 'Error'; resp.className = 'response-message show error'; }
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    loadCryptoMethods();
+});
+
+</script>
+{% endblock %}

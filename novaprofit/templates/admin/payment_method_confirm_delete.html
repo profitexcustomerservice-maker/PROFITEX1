@@ -1,0 +1,38 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Delete Payment Method</h1>
+    <p class="page-subtitle">Confirm deletion of this crypto wallet</p>
+</div>
+
+<div class="card">
+    <div style="max-width: 600px;">
+        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <h3 style="margin-top: 0; color: #856404;">⚠️ Warning</h3>
+            <p style="margin-bottom: 0; color: #856404;">
+                You are about to delete the payment method: <strong>{{ payment_method.name }} ({{ payment_method.network }})</strong>. 
+                This action cannot be undone.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <p style="font-weight: 600;">Payment Method Details:</p>
+            <div style="background: #f9f9f9; padding: 16px; border-radius: 6px;">
+                <p style="margin: 8px 0;"><strong>Name:</strong> {{ payment_method.name }}</p>
+                <p style="margin: 8px 0;"><strong>Network:</strong> {{ payment_method.network }}</p>
+                <p style="margin: 8px 0;"><strong>Wallet Address:</strong> <code>{{ payment_method.wallet_address }}</code></p>
+                <p style="margin: 8px 0;"><strong>Status:</strong> {% if payment_method.is_active %}Active{% else %}Inactive{% endif %}</p>
+                <p style="margin: 8px 0;"><strong>Created:</strong> {{ payment_method.created_at|date:"M d, Y H:i" }}</p>
+            </div>
+        </div>
+
+        <form method="post" style="display: flex; gap: 12px;">
+            {% csrf_token %}
+            <button type="submit" class="danger" style="flex: 1;">Confirm Delete</button>
+            <a href="{% url 'payment_method_list' %}" style="flex: 1; text-align: center; padding: 12px; background: #f5f5f5; color: #333; border: 1px solid #ddd; border-radius: 6px; text-decoration: none;">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

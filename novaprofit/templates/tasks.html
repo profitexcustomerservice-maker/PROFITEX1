@@ -1,0 +1,639 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.tasks-container {
+    padding: 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.tasks-header {
+    margin-bottom: 32px;
+}
+
+.tasks-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.tasks-header p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.125rem;
+}
+
+.tasks-tabs {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab-btn {
+    padding: 16px 24px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.tab-btn:hover {
+    color: white;
+}
+
+.tab-btn.active {
+    color: #667eea;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 3px 3px 0 0;
+}
+
+.tasks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+}
+
+.task-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.task-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.task-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+}
+
+.task-card:hover::before {
+    opacity: 1;
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.task-type {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.task-type.ad {
+    background: rgba(102, 126, 234, 0.2);
+    color: #667eea;
+}
+
+.task-type.survey {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.task-type.study {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.task-reward {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #10b981;
+}
+
+.task-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.task-description {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.task-meta {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.task-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.875rem;
+}
+
+.task-media {
+    margin-bottom: 16px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.task-media img,
+.task-media video {
+    width: 100%;
+    border-radius: 12px;
+}
+
+.task-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.task-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.task-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.task-btn .spinner {
+    display: none;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.task-btn.loading .spinner {
+    display: block;
+}
+
+.task-btn.loading .btn-text {
+    opacity: 0;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.completed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 24px;
+    opacity: 0.3;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: white;
+}
+
+.skeleton {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-card {
+    height: 280px;
+}
+
+/* Responsive - Mobile First */
+@media (max-width: 1024px) {
+    .tasks-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .tasks-container {
+        padding: 20px 16px;
+    }
+    
+    .tasks-header {
+        margin-bottom: 24px;
+    }
+    
+    .tasks-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .tasks-header p {
+        font-size: 1rem;
+    }
+    
+    .tasks-tabs {
+        overflow-x: auto;
+        padding-bottom: 8px;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .tab-btn {
+        padding: 12px 16px;
+        white-space: nowrap;
+        min-height: 48px;
+        font-size: 0.9rem;
+    }
+    
+    .tasks-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .task-card {
+        padding: 20px;
+        border-radius: 16px;
+    }
+    
+    .task-header {
+        margin-bottom: 12px;
+    }
+    
+    .task-type {
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    
+    .task-reward {
+        font-size: 1.1rem;
+    }
+    
+    .task-title {
+        font-size: 1.1rem;
+    }
+    
+    .task-description {
+        font-size: 0.85rem;
+        margin-bottom: 12px;
+    }
+    
+    .task-meta {
+        margin-bottom: 12px;
+        gap: 12px;
+    }
+    
+    .task-meta-item {
+        font-size: 0.8rem;
+    }
+    
+    .task-media {
+        margin-bottom: 12px;
+        border-radius: 8px;
+    }
+    
+    .task-btn {
+        padding: 14px 16px;
+        min-height: 48px;
+        font-size: 0.95rem;
+    }
+    
+    .empty-state {
+        padding: 48px 16px;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .tasks-container {
+        padding: 16px 12px;
+    }
+    
+    .tasks-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .tasks-header p {
+        font-size: 0.9rem;
+    }
+    
+    .task-card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+    
+    .task-title {
+        font-size: 1rem;
+    }
+    
+    .task-description {
+        font-size: 0.8rem;
+    }
+    
+    .task-btn {
+        padding: 12px 14px;
+        font-size: 0.9rem;
+    }
+    
+    .completed-badge {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+</style>
+
+<div class="tasks-container">
+    <div class="tasks-header">
+        <h1>Tasks</h1>
+        <p>Complete tasks and earn rewards. Choose from various task types.</p>
+    </div>
+
+    <div id="task-access-warning" class="empty-state" style="display:none; grid-column: 1 / -1; margin-bottom: 24px;">
+        <div class="empty-state-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        <h3>Tasks are locked</h3>
+            <p>Deposit at least $50 to unlock tasks and start earning rewards.</p>
+    </div>
+
+    <div id="available-tasks" class="tab-content">
+        <div class="tasks-grid" id="task-list">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+        </div>
+    </div>
+
+    <div id="completed-tasks" class="tab-content" style="display: none;">
+        <div class="tasks-grid" id="completed-list">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const taskAccessAllowed = {{ task_access_allowed|yesno:"true,false" }};
+window.addEventListener('DOMContentLoaded', () => {
+    const taskList = document.getElementById('task-list');
+    const completedList = document.getElementById('completed-list');
+    const taskAccessWarning = document.getElementById('task-access-warning');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    if (!taskAccessAllowed) {
+        taskAccessWarning.style.display = 'block';
+        taskList.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3>Tasks are locked</h3>
+                <p>Deposit at least $50 to unlock tasks and rewards in your account.</p>
+            </div>
+        `;
+        completedList.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+                <div class="empty-state-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3>Completed tasks are hidden</h3>
+                <p>Deposit at least $50 to view and complete tasks.</p>
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const tab = btn.dataset.tab;
+            tabContents.forEach(content => {
+                content.style.display = content.id === `${tab}-tasks` ? 'block' : 'none';
+            });
+        });
+    });
+
+    function loadCompleted() {
+        fetch('/api/user-tasks/?limit=20', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    completedList.innerHTML = data.results.map(item => `
+                        <div class="task-card">
+                            <div class="task-header">
+                                <span class="task-type ${item.task.task_type.toLowerCase()}">${item.task.task_type}</span>
+                                <span class="task-reward">$${item.task.reward}</span>
+                            </div>
+                            <h3 class="task-title">${item.task.title}</h3>
+                            <p class="task-description">${item.task.description}</p>
+                            <div class="task-meta">
+                                <div class="task-meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>${item.task.duration} min</span>
+                                </div>
+                            </div>
+                            <div class="completed-badge">
+                                <i class="fas fa-check-circle"></i>
+                                Completed at ${new Date(item.completed_at).toLocaleString()}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    completedList.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <h3>No completed tasks yet</h3>
+                            <p>Start completing tasks to see your progress here.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                completedList.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h3>Error loading completed tasks</h3>
+                        <p>Please try again later.</p>
+                    </div>
+                `;
+            });
+    }
+
+    function loadTasks() {
+        fetch('/api/tasks/?limit=20', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    taskList.innerHTML = data.results.map(task => {
+                        const media = task.media ? `
+                            <div class="task-media">
+                                ${task.media_type === 'video' 
+                                    ? `<video controls><source src="${task.media}" type="video/mp4"></video>` 
+                                    : `<img src="${task.media}" alt="${task.title}">`}
+                            </div>
+                        ` : '';
+                        
+                        return `
+                            <div class="task-card">
+                                <div class="task-header">
+                                    <span class="task-type ${task.task_type.toLowerCase()}">${task.task_type}</span>
+                                    <span class="task-reward">$${task.reward}</span>
+                                </div>
+                                <h3 class="task-title">${task.title}</h3>
+                                <p class="task-description">${task.description}</p>
+                                <div class="task-meta">
+                                    <div class="task-meta-item">
+                                        <i class="fas fa-clock"></i>
+                                        <span>${task.duration} min</span>
+                                    </div>
+                                </div>
+                                ${media}
+                                <button class="task-btn" onclick="completeTask(${task.id}, this)">
+                                    <span class="btn-text">Complete Task</span>
+                                    <div class="spinner"></div>
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    taskList.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-inbox"></i>
+                            </div>
+                            <h3>No tasks available</h3>
+                            <p>Check back later for new tasks to complete.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                taskList.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h3>Error loading tasks</h3>
+                        <p>Please try again later.</p>
+                    </div>
+                `;
+            });
+    }
+
+    window.completeTask = (taskId, btn) => {
+        if (btn.classList.contains('loading')) return;
+        
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        apiFetch('/api/user-tasks/', {
+            method: 'POST',
+            body: JSON.stringify({ task_id: taskId }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            
+            // Show success feedback
+            const originalText = btn.querySelector('.btn-text').textContent;
+            btn.querySelector('.btn-text').textContent = 'Completed!';
+            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            
+            setTimeout(() => {
+                loadTasks();
+                loadCompleted();
+            }, 1000);
+        })
+        .catch(error => {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            alert('Unable to complete task. Please try again.');
+        });
+    };
+
+    loadTasks();
+    loadCompleted();
+});
+</script>
+{% endblock %}

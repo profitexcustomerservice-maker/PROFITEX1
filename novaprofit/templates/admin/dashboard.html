@@ -1,0 +1,321 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Overview of your Profitex system</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon primary">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="total-users">{{ total_users }}</div>
+        <div class="stat-label">Total Users</div>
+        <div class="stat-change positive">+12.5% from last month</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon success">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2m0 0c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="total-deposits">{{ total_deposits }}</div>
+        <div class="stat-label">Total Deposits</div>
+        <div class="stat-change positive">+8.2% from last month</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="total-withdrawals">{{ total_withdrawals }}</div>
+        <div class="stat-label">Total Withdrawals</div>
+        <div class="stat-change negative">+3.1% from last month</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon danger">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="total-tasks">{{ total_tasks_completed }}</div>
+
+        <div class="stat-label">Tasks Completed</div>
+        <div class="stat-change positive">+15.3% from last month</div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon info">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2m0 0c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="total-earnings">${{ total_balance }}</div>
+<div class="stat-label">Total Platform Balance</div>
+        <div class="stat-change positive">+22.7% from last month</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon primary">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="active-users">{{ active_users }}</div>
+        <div class="stat-label">Active Users</div>
+        <div class="stat-change positive">+5.8% from last month</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon warning">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="pending-deposits">{{ pending_deposits }}</div>
+        <div class="stat-label">Pending Deposits</div>
+        <div class="stat-change">Requires attention</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon danger">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="stat-value" id="pending-withdrawals">{{ pending_withdrawals }}</div>
+        <div class="stat-label">Pending Withdrawals</div>
+        <div class="stat-change">Requires attention</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">Recent Transactions</h3>
+        <div id="recent-transactions">
+            <div class="loading"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">System Activity</h3>
+        <div id="system-activity">
+            <div class="loading">Loading activity...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.transaction-item:last-child {
+    border-bottom: none;
+}
+
+.transaction-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.transaction-type {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.transaction-user {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.transaction-amount {
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.activity-info {
+    flex: 1;
+}
+
+.activity-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.activity-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+</style>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    // loadDashboardStats();
+    loadRecentTransactions();
+
+    loadSystemActivity();
+});
+
+async function loadDashboardStats() {
+    try {
+        // Load user count
+        const usersResponse = await apiFetch('/api/auth/users/');
+        const usersData = await handleJsonResponse(usersResponse);
+        document.getElementById('total-users').textContent = usersData.length || 0;
+        document.getElementById('active-users').textContent = usersData.filter(u => u.last_active).length || 0;
+
+        // Load transactions for financial stats
+        const transactionsResponse = await apiFetch('/api/transactions/');
+        const transactionsData = await handleJsonResponse(transactionsResponse);
+        
+        let totalDeposits = 0;
+        let totalWithdrawals = 0;
+        let totalEarnings = 0;
+        
+        transactionsData.results.forEach(tx => {
+            if (tx.transaction_type === 'DEPOSIT') {
+                totalDeposits += Math.abs(parseFloat(tx.amount));
+            } else if (tx.transaction_type === 'WITHDRAWAL') {
+                totalWithdrawals += Math.abs(parseFloat(tx.amount));
+            } else if (tx.transaction_type === 'TASK_REWARD') {
+                totalEarnings += parseFloat(tx.amount);
+            }
+        });
+
+        document.getElementById('total-deposits').textContent = `$${totalDeposits.toFixed(2)}`;
+        document.getElementById('total-withdrawals').textContent = `$${totalWithdrawals.toFixed(2)}`;
+        document.getElementById('total-earnings').textContent = `$${totalEarnings.toFixed(2)}`;
+
+        // Load tasks count
+        const tasksResponse = await apiFetch('/api/user-tasks/');
+        const tasksData = await handleJsonResponse(tasksResponse);
+        document.getElementById('total-tasks').textContent = tasksData.count || 0;
+
+        // Load pending deposits/withdrawals (placeholder logic)
+        document.getElementById('pending-deposits').textContent = '0';
+        document.getElementById('pending-withdrawals').textContent = '0';
+
+    } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+        showToast('Error loading dashboard stats', 'error');
+    }
+}
+
+async function loadRecentTransactions() {
+    try {
+        const response = await apiFetch('/api/transactions/?limit=5');
+        const data = await handleJsonResponse(response);
+        
+        const container = document.getElementById('recent-transactions');
+        
+        if (data.results.length === 0) {
+            container.innerHTML = '<div class="no-data">No transactions found</div>';
+            return;
+        }
+
+        container.innerHTML = data.results.map(tx => `
+            <div class="transaction-item">
+                <div class="transaction-info">
+                    <div class="transaction-type">${formatTransactionType(tx.transaction_type)}</div>
+                    <div class="transaction-user">${tx.reference || 'No reference'}</div>
+                </div>
+                <div class="transaction-amount ${tx.amount >= 0 ? 'text-success' : 'text-danger'}">
+                    ${tx.amount >= 0 ? '+' : ''}$${Math.abs(tx.amount).toFixed(2)}
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading recent transactions:', error);
+        document.getElementById('recent-transactions').innerHTML = '<div class="error">Error loading transactions</div>';
+    }
+}
+
+async function loadSystemActivity() {
+    try {
+        const container = document.getElementById('system-activity');
+        
+        // Placeholder activity data
+        const activities = [
+            { title: 'New user registered', time: '2 minutes ago', icon: 'user' },
+            { title: 'Deposit approved', time: '5 minutes ago', icon: 'deposit' },
+            { title: 'Task completed', time: '8 minutes ago', icon: 'task' },
+            { title: 'Withdrawal requested', time: '12 minutes ago', icon: 'withdrawal' },
+            { title: 'Plan purchased', time: '15 minutes ago', icon: 'plan' },
+        ];
+
+        container.innerHTML = activities.map(activity => `
+            <div class="activity-item">
+                <div class="activity-icon">
+                    ${getActivityIcon(activity.icon)}
+                </div>
+                <div class="activity-info">
+                    <div class="activity-title">${activity.title}</div>
+                    <div class="activity-time">${activity.time}</div>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading system activity:', error);
+        document.getElementById('system-activity').innerHTML = '<div class="error">Error loading activity</div>';
+    }
+}
+
+function formatTransactionType(type) {
+    const types = {
+        'TASK_REWARD': 'Task Reward',
+        'DEPOSIT': 'Deposit',
+        'WITHDRAWAL': 'Withdrawal',
+        'ADJUSTMENT': 'Adjustment'
+    };
+    return types[type] || type;
+}
+
+function getActivityIcon(icon) {
+    const icons = {
+        user: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+        deposit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2m0 0c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+        task: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>',
+        withdrawal: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>',
+        plan: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2-1.343-2-3-2m0 0c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+    };
+    return icons[icon] || icons.user;
+}
+</script>
+{% endblock %}

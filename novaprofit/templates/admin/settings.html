@@ -1,0 +1,148 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Admin Settings</h1>
+    <p class="page-subtitle">Configure system settings and preferences</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">General Settings</h3>
+        <form id="general-settings-form">
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Site Name</label>
+                <input type="text" name="site_name" value="Profitex" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Site Description</label>
+                <textarea name="site_description" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">Earn money by completing simple tasks</textarea>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Contact Email</label>
+                <input type="email" name="contact_email" value="support@profitex.com" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Maintenance Mode</label>
+                <select name="maintenance_mode" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
+                </select>
+            </div>
+            <button type="submit" class="primary">Save General Settings</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">Financial Settings</h3>
+        <form id="financial-settings-form">
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Minimum Withdrawal Amount ($)</label>
+                <input type="number" name="min_withdrawal" step="0.01" min="0" value="10" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Maximum Withdrawal Amount ($)</label>
+                <input type="number" name="max_withdrawal" step="0.01" min="0" value="1000" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Withdrawal Fee (%)</label>
+                <input type="number" name="withdrawal_fee" step="0.1" min="0" max="10" value="0" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Currency</label>
+                <select name="currency" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                </select>
+            </div>
+            <button type="submit" class="primary">Save Financial Settings</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 24px;">
+    <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">Notification Settings</h3>
+    <form id="notification-settings-form">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="email_notifications" checked style="width: auto; margin: 0;">
+                    Email Notifications
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="task_completion_alerts" checked style="width: auto; margin: 0;">
+                    Task Completion Alerts
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="payment_notifications" checked style="width: auto; margin: 0;">
+                    Payment Notifications
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="security_alerts" checked style="width: auto; margin: 0;">
+                    Security Alerts
+                </label>
+            </div>
+            <div>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="deposit_notifications" checked style="width: auto; margin: 0;">
+                    Deposit Notifications
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="withdrawal_notifications" checked style="width: auto; margin: 0;">
+                    Withdrawal Notifications
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="plan_expiry_alerts" checked style="width: auto; margin: 0;">
+                    Plan Expiry Alerts
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                    <input type="checkbox" name="system_updates" checked style="width: auto; margin: 0;">
+                    System Updates
+                </label>
+            </div>
+        </div>
+        <div style="margin-top: 20px;">
+            <button type="submit" class="primary">Save Notification Settings</button>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="margin-top: 24px;">
+    <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">System Information</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div style="padding: 16px; background: var(--bg-main); border-radius: var(--radius-md);">
+            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 4px;">Django Version</div>
+            <div style="font-weight: 600;">6.0.4</div>
+        </div>
+        <div style="padding: 16px; background: var(--bg-main); border-radius: var(--radius-md);">
+            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 4px;">Python Version</div>
+            <div style="font-weight: 600;">3.12+</div>
+        </div>
+        <div style="padding: 16px; background: var(--bg-main); border-radius: var(--radius-md);">
+            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 4px;">Database</div>
+            <div style="font-weight: 600;">SQLite</div>
+        </div>
+        <div style="padding: 16px; background: var(--bg-main); border-radius: var(--radius-md);">
+            <div style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 4px;">Debug Mode</div>
+            <div style="font-weight: 600;">False</div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('general-settings-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    showToast('General settings saved successfully', 'success');
+});
+
+document.getElementById('financial-settings-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    showToast('Financial settings saved successfully', 'success');
+});
+
+document.getElementById('notification-settings-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    showToast('Notification settings saved successfully', 'success');
+});
+</script>
+{% endblock %}

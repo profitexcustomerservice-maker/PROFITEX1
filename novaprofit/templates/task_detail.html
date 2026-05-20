@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 id="task-title" class="card-title">Loading task...</h2>
+    </div>
+    <div id="task-content">
+        <div class="loading">Loading task details...</div>
+    </div>
+</div>
+
+<!-- Task Completion Modal -->
+<div id="completion-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Complete Task</h3>
+            <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="completion-form">
+                <div id="timer-display" style="font-size: 2rem; text-align: center; margin: 24px 0; font-weight: 700; color: var(--primary);">
+                    <span id="timer">00:00</span>
+                </div>
+                <div id="task-specific-form">
+                    <!-- Dynamic form based on task type -->
+                </div>
+                <div style="text-align: center; margin-top: 24px;">
+                    <button id="complete-btn" onclick="completeTask()">Complete Task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background-color: var(--bg-card);
+    margin: 10% auto;
+    padding: 32px;
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 600px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text);
+}
+
+.close {
+    color: var(--text-muted);
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color var(--transition);
+}
+
+.close:hover {
+    color: var(--text);
+}
+
+.task-info {
+    background: var(--primary-light);
+    padding: 20px;
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+}
+
+.task-info p {
+    margin: 8px 0;
+}
+
+.task-media {
+    text-align: center;
+    margin: 24px 0;
+}
+
+.task-media img, .task-media video {
+    max-width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.survey-question {
+    margin: 16px 0;
+    padding: 20px;
+    background: var(--bg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+
+.survey-option {
+    margin: 12px 0;
+}
+
+.survey-option label {
+    margin-left: 12px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.ad-container {
+    text-align: center;
+    margin: 24px 0;
+    padding: 24px;
+    background: var(--primary-light);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--primary);
+}
+
+.ad-link {
+    display: inline-block;
+    padding: 12px 24px;
+    background: var(--primary);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.ad-link:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.study-container {
+    background: var(--warning-light);
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    margin: 24px 0;
+    border: 2px solid var(--warning);
+}
+
+.survey-container {
+    background: var(--success-light);
+    padding: 24px;
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--success);
+    margin: 24px 0;
+}
+</style>
+
+<script>
+let currentTask = null;
+let timerInterval = null;
+let startTime = null;
+
+// Get task ID from URL
+const taskId = window.location.pathname.split('/').pop();
+
+window.addEventListener('DOMContentLoaded', () => {
+    loadTaskDetail();
+});
+
+function loadTaskDetail() {
+    fetch(`/api/tasks/${taskId}/`, { credentials: 'same-origin' })
+        .then(handleJsonResponse)
+        .then(data => {
+            currentTask = data;
+            displayTaskDetail(data);
+        })
+        .catch(error => {
+            document.getElementById('task-content').innerHTML = 
+                '<div class="error">Error loading task. Please try again.</div>';
+        });
+}
+
+function displayTaskDetail(task) {
+    document.getElementById('task-title').textContent = task.title;
+    
+    let content = `
+        <div class="task-info">
+            <p><strong>Type:</strong> ${task.task_type_display}</p>
+            <p><strong>Reward:</strong> $${task.reward}</p>
+            <p><strong>Required Duration:</strong> ${task.required_duration} seconds</p>
+            ${task.premium_only ? '<p style="color: var(--danger); font-weight: 600;">⭐ Premium Task Only</p>' : ''}
+            <p><strong>Description:</strong></p>
+            <p>${task.description || 'No description available'}</p>
+        </div>
+    `;
+    
+    // Add media if available
+    if (task.media) {
+        content += `
+            <div class="task-media">
+                ${task.media_type === 'video' ? 
+                    `<video controls width="400">
+                        <source src="${task.media}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>` : 
+                    `<img src="${task.media}" alt="Task media">`
+                }
+            </div>
+        `;
+    }
+    
+    // Add task-specific content
+    if (task.task_type === 'advertise') {
+        content += `
+            <div class="ad-container">
+                <h3>Advertisement Task</h3>
+                <p>Click the advertisement below and keep it open for at least ${task.required_duration} seconds.</p>
+                <a href="${task.ad_url}" target="_blank" class="ad-link" onclick="startTimer()">
+                    Open Advertisement
+                </a>
+            </div>
+        `;
+    } else if (task.task_type === 'survey') {
+        content += generateSurveyForm(task.survey_data);
+    } else if (task.task_type === 'study') {
+        content += `
+            <div class="study-container">
+                <h3>Study Task</h3>
+                <p>Study the content below for at least ${task.required_duration} seconds.</p>
+                ${task.media ? `
+                    <div class="task-media">
+                        ${task.media_type === 'video' ? 
+                            `<video controls id="study-video" width="400">
+                                <source src="${task.media}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>` : 
+                            `<img src="${task.media}" alt="Study content">`
+                        }
+                    </div>
+                ` : ''}
+                <button onclick="startTimer()">Start Studying</button>
+            </div>
+        `;
+    }
+    
+    content += `
+        <div style="text-align: center; margin-top: 32px;">
+            <button onclick="showCompletionModal()">Complete Task</button>
+        </div>
+    `;
+    
+    document.getElementById('task-content').innerHTML = content;
+}
+
+function generateSurveyForm(surveyData) {
+    if (!surveyData || Object.keys(surveyData).length === 0) {
+        return '<div class="error">No survey questions available.</div>';
+    }
+    
+    let form = '<div class="survey-container"><h3>Survey Questions</h3>';
+    
+    Object.entries(surveyData).forEach(([questionId, question]) => {
+        form += `
+            <div class="survey-question">
+                <p><strong>${question.question}</strong></p>
+                <div class="survey-options">
+        `;
+        
+        if (question.type === 'multiple_choice') {
+            question.options.forEach(option => {
+                form += `
+                    <div class="survey-option">
+                        <input type="radio" name="question_${questionId}" value="${option}" id="option_${questionId}_${option}">
+                        <label for="option_${questionId}_${option}">${option}</label>
+                    </div>
+                `;
+            });
+        } else if (question.type === 'text') {
+            form += `
+                <div class="survey-option">
+                    <textarea name="question_${questionId}" id="question_${questionId}" 
+                              rows="4"></textarea>
+                </div>
+            `;
+        }
+        
+        form += '</div></div>';
+    });
+    
+    form += '</div>';
+    return form;
+}
+
+function showCompletionModal() {
+    document.getElementById('completion-modal').style.display = 'block';
+    setupCompletionForm();
+}
+
+function closeModal() {
+    document.getElementById('completion-modal').style.display = 'none';
+    stopTimer();
+}
+
+function setupCompletionForm() {
+    const formContainer = document.getElementById('task-specific-form');
+    
+    if (currentTask.task_type === 'survey') {
+        formContainer.innerHTML = generateSurveyForm(currentTask.survey_data);
+    } else if (currentTask.task_type === 'advertise') {
+        formContainer.innerHTML = `
+            <div style="text-align: center;">
+                <p>Confirm you have viewed the advertisement for at least ${currentTask.required_duration} seconds.</p>
+                <p><strong>Time spent:</strong> <span id="advertise-time">0</span> seconds</p>
+            </div>
+        `;
+    } else if (currentTask.task_type === 'study') {
+        formContainer.innerHTML = `
+            <div style="text-align: center;">
+                <p>Confirm you have studied the content for at least ${currentTask.required_duration} seconds.</p>
+                <p><strong>Time spent:</strong> <span id="study-time">0</span> seconds</p>
+            </div>
+        `;
+    }
+}
+
+function startTimer() {
+    if (timerInterval) return;
+    
+    startTime = Date.now();
+    timerInterval = setInterval(updateTimer, 1000);
+    showToast('Timer started!', 'info');
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    
+    document.getElementById('timer').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Update time display for specific task types
+    const timeElement = document.getElementById('advertise-time') || 
+                        document.getElementById('study-time');
+    if (timeElement) {
+        timeElement.textContent = elapsed;
+    }
+}
+
+function completeTask() {
+    const completionData = {
+        task_id: currentTask.id,
+        duration_spent: Math.floor((Date.now() - startTime) / 1000) || 0
+    };
+    
+    // Add task-specific data
+    if (currentTask.task_type === 'survey') {
+        const surveyAnswers = {};
+        document.querySelectorAll('[name^="question_"]').forEach(input => {
+            if (input.type === 'radio' && input.checked) {
+                surveyAnswers[input.name] = input.value;
+            } else if (input.type === 'textarea') {
+                surveyAnswers[input.name] = input.value;
+            }
+        });
+        completionData.survey_answers = surveyAnswers;
+    }
+    
+    // Validate minimum duration
+    if (completionData.duration_spent < currentTask.required_duration) {
+        showToast(`You must spend at least ${currentTask.required_duration} seconds on this task.`, 'warning');
+        return;
+    }
+    
+    // Submit completion
+    apiFetch('/api/user-tasks/', {
+        method: 'POST',
+        body: JSON.stringify(completionData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Task completed successfully! You earned $${data.reward_earned.toFixed(2)}`, 'success');
+            closeModal();
+            // Redirect back to tasks page
+            setTimeout(() => {
+                window.location.href = '/tasks_page/';
+            }, 1500);
+        } else {
+            showToast(data.error || 'Failed to complete task. Please try again.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error completing task:', error);
+        showToast('Error completing task. Please try again.', 'error');
+    });
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('completion-modal');
+    if (event.target === modal) {
+        closeModal();
+    }
+}
+</script>
+{% endblock %}

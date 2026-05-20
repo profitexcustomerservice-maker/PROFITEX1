@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profitex Admin - Login</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #e0e7ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg-sidebar: #1e293b;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --text: #0f172a;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            display: flex;
+            width: 100%;
+            max-width: 1000px;
+            min-height: 600px;
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            overflow: hidden;
+        }
+
+        .login-sidebar {
+            width: 50%;
+            background: var(--bg-sidebar);
+            color: white;
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-sidebar h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .login-sidebar p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .login-features {
+            list-style: none;
+        }
+
+        .login-features li {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .login-features svg {
+            width: 20px;
+            height: 20px;
+            color: var(--success);
+        }
+
+        .login-form-container {
+            width: 50%;
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-header {
+            margin-bottom: 32px;
+        }
+
+        .login-header h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 12px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 8px;
+        }
+
+        .login-button:hover {
+            background: var(--primary-dark);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #ef4444;
+            padding: 12px;
+            border-radius: var(--radius-lg);
+            border: 1px solid #fecaca;
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+        }
+
+        .login-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .login-footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+                max-width: 400px;
+                min-height: auto;
+            }
+
+            .login-sidebar {
+                width: 100%;
+                padding: 32px;
+            }
+
+            .login-form-container {
+                width: 100%;
+                padding: 32px;
+            }
+
+            .login-sidebar h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-sidebar">
+            <h1>Profitex Admin</h1>
+            <p>Secure access to the Profitex administration panel. Manage users, tasks, shares, and monitor all system activities.</p>
+            <ul class="login-features">
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+                    Full system control
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+                    User management
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+                    Financial oversight
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+                    Real-time analytics
+                </li>
+            </ul>
+        </div>
+        <div class="login-form-container">
+            <div class="login-header">
+                <h2>Welcome Back</h2>
+                <p>Enter your credentials to access the admin panel</p>
+            </div>
+            {% if error %}
+            <div class="error-message">{{ error }}</div>
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="admin@profitex.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password">
+                </div>
+                <button type="submit" class="login-button">Sign In</button>
+            </form>
+            <div class="login-footer">
+                <p>Protected by Django authentication system</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

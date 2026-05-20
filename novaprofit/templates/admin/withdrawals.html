@@ -1,0 +1,302 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Withdrawals Approval</h1>
+    <p class="page-subtitle">Review and approve withdrawal requests</p>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <select id="filter-status" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
+            <input type="text" id="search-withdrawals" placeholder="Search by user..." style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); width: 250px;">
+        </div>
+        <button onclick="loadWithdrawals()">Refresh</button>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Account Details</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="withdrawals-table-body">
+                <tr>
+                    <td colspan="7">
+                        <div class="loading">Loading withdrawals...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pagination" class="pagination" style="margin-top: 20px;"></div>
+</div>
+
+<!-- Withdrawal Details Modal -->
+<div id="withdrawal-details-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: white; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">Withdrawal Details</h2>
+            <span onclick="closeWithdrawalModal()" style="color: #aaa; font-size: 28px; cursor: pointer;">&times;</span>
+        </div>
+        
+        <div style="border-top: 1px solid #eee; padding-top: 15px;">
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Withdrawal ID:</strong>
+                <div id="detail-withdrawal-id" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">User Email:</strong>
+                <div id="detail-withdrawal-user" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Amount:</strong>
+                <div id="detail-withdrawal-amount" style="color: #333; font-weight: bold;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Wallet Address:</strong>
+                <div id="detail-withdrawal-address" style="color: #333; word-break: break-all; font-size: 0.85rem;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Status:</strong>
+                <div id="detail-withdrawal-status" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Requested At:</strong>
+                <div id="detail-withdrawal-requested" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Processed At:</strong>
+                <div id="detail-withdrawal-processed" style="color: #333;">-</div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong style="color: #666;">Reference:</strong>
+                <div id="detail-withdrawal-reference" style="color: #333; font-family: monospace;">-</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: right;">
+            <button onclick="closeWithdrawalModal()" style="padding: 8px 16px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.pagination button {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.pagination button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.pagination button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+</style>
+
+<script>
+let allWithdrawalsData = [];
+
+window.addEventListener('DOMContentLoaded', () => {
+    // Use withdrawals data passed from server
+    const withdrawalsData = JSON.parse('{{ withdrawals_json|escapejs }}');
+    allWithdrawalsData = withdrawalsData;
+    renderWithdrawals(withdrawalsData);
+});
+
+async function loadWithdrawals() {
+    try {
+        const response = await apiFetch('/admin_panel/api/withdrawals/');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                allWithdrawalsData = data.results || [];
+                renderWithdrawals(allWithdrawalsData);
+            } else {
+                showToast(data.error || 'Error loading withdrawals', 'error');
+            }
+        } else {
+            showToast('Error loading withdrawals', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading withdrawals:', error);
+        showToast('Error loading withdrawals', 'error');
+    }
+}
+
+function renderWithdrawals(data) {
+    const container = document.getElementById('withdrawals-table-body');
+    
+    if (data.length === 0) {
+        container.innerHTML = '<tr><td colspan="7"><div class="no-data">No withdrawals found</div></td></tr>';
+        return;
+    }
+
+    container.innerHTML = data.map(withdrawal => `
+        <tr>
+            <td>
+                <div style="font-weight: 600;">${withdrawal.user_email || 'User #' + withdrawal.user}</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Ref: ${withdrawal.reference || 'N/A'}</div>
+            </td>
+            <td>
+                <div style="font-weight: 700; color: var(--danger);">$${withdrawal.amount ? parseFloat(withdrawal.amount).toFixed(2) : '0.00'}</div>
+            </td>
+            <td>Bank Transfer</td>
+            <td>
+                <div style="font-family: monospace; font-size: 0.875rem;">${withdrawal.reference || 'N/A'}</div>
+            </td>
+            <td>
+                <span class="badge ${getStatusBadgeClass(withdrawal.status)}">
+                    ${withdrawal.status || 'PENDING'}
+                </span>
+            </td>
+            <td>${withdrawal.requested_at ? formatDate(withdrawal.requested_at) : 'N/A'}</td>
+            <td>
+                <div style="display: flex; gap: 8px;">
+                    ${withdrawal.status === 'PENDING' ? `
+                        <button onclick="approveWithdrawal('${withdrawal.id}')" class="success" style="padding: 6px 12px; font-size: 0.75rem;">Approve</button>
+                        <button onclick="rejectWithdrawal('${withdrawal.id}')" class="danger" style="padding: 6px 12px; font-size: 0.75rem;">Reject</button>
+                    ` : `
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">Processed</span>
+                    `}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function approveWithdrawal(withdrawalId) {
+    if (!confirm('Are you sure you want to approve this withdrawal?')) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`/admin_panel/api/withdrawals/${withdrawalId}/approve/`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                showToast('Withdrawal approved successfully', 'success');
+                loadWithdrawals();
+            } else {
+                showToast(data.error || 'Error approving withdrawal', 'error');
+            }
+        } else {
+            const err = await response.json().catch(() => ({}));
+            showToast(err.error || 'Error approving withdrawal', 'error');
+        }
+    } catch (error) {
+        console.error('Error approving withdrawal:', error);
+        showToast('Error approving withdrawal', 'error');
+    }
+}
+
+async function rejectWithdrawal(withdrawalId) {
+    if (!confirm('Are you sure you want to reject this withdrawal?')) {
+        return;
+    }
+
+    try {
+        const response = await apiFetch(`/admin_panel/api/withdrawals/${withdrawalId}/reject/`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                showToast('Withdrawal rejected successfully', 'success');
+                loadWithdrawals();
+            } else {
+                showToast(data.error || 'Error rejecting withdrawal', 'error');
+            }
+        } else {
+            const err = await response.json().catch(() => ({}));
+            showToast(err.error || 'Error rejecting withdrawal', 'error');
+        }
+    } catch (error) {
+        console.error('Error rejecting withdrawal:', error);
+        showToast('Error rejecting withdrawal', 'error');
+    }
+}
+
+function viewWithdrawalDetails(withdrawalId) {
+    const withdrawal = allWithdrawalsData.find(w => String(w.id) === String(withdrawalId));
+    if (!withdrawal) {
+        showToast('Withdrawal not found', 'error');
+        return;
+    }
+    
+    document.getElementById('detail-withdrawal-id').textContent = withdrawal.id;
+    document.getElementById('detail-withdrawal-user').textContent = withdrawal.user_email || 'N/A';
+    document.getElementById('detail-withdrawal-amount').textContent = `$${parseFloat(withdrawal.amount).toFixed(2)}`;
+    document.getElementById('detail-withdrawal-address').textContent = withdrawal.wallet_address || 'N/A';
+    document.getElementById('detail-withdrawal-status').textContent = (withdrawal.status || 'PENDING').toUpperCase();
+    document.getElementById('detail-withdrawal-requested').textContent = withdrawal.requested_at ? formatDate(withdrawal.requested_at) : 'N/A';
+    document.getElementById('detail-withdrawal-processed').textContent = withdrawal.processed_at ? formatDate(withdrawal.processed_at) : 'Pending';
+    document.getElementById('detail-withdrawal-reference').textContent = withdrawal.reference || 'N/A';
+    
+    document.getElementById('withdrawal-details-modal').style.display = 'block';
+}
+
+function closeWithdrawalModal() {
+    document.getElementById('withdrawal-details-modal').style.display = 'none';
+}
+
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('withdrawal-details-modal');
+    if (event.target === modal) {
+        closeWithdrawalModal();
+    }
+});
+
+function getStatusBadgeClass(status) {
+    // Handle both uppercase (DB stored) and lowercase values
+    const s = (status || '').toUpperCase();
+    if (s === 'PENDING') return 'warning';
+    if (s === 'APPROVED') return 'success';
+    if (s === 'REJECTED') return 'danger';
+    return 'info';
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+</script>
+{% endblock %}

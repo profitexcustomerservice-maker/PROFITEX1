@@ -1,0 +1,641 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.plans-container {
+    padding: 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.plans-header {
+    margin-bottom: 32px;
+}
+
+.plans-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.plans-header p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.125rem;
+}
+
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    margin-bottom: 48px;
+}
+
+.plan-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 32px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.plan-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.plan-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+}
+
+.plan-card:hover::before {
+    opacity: 1;
+}
+
+.plan-card.featured {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    border: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+.plan-card.featured::before {
+    opacity: 1;
+}
+
+.featured-badge {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.plan-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.plan-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.plan-price {
+    font-size: 3rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.plan-price span {
+    font-size: 1rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.plan-duration {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+}
+
+.plan-features {
+    margin-bottom: 32px;
+}
+
+.plan-feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.plan-feature:last-child {
+    border-bottom: none;
+}
+
+.plan-feature i {
+    color: #10b981;
+    font-size: 1rem;
+}
+
+.plan-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.plan-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.plan-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.plan-btn .spinner {
+    display: none;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.plan-btn.loading .spinner {
+    display: block;
+}
+
+.plan-btn.loading .btn-text {
+    opacity: 0;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.subscriptions-section {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 32px;
+}
+
+.section-header {
+    margin-bottom: 24px;
+}
+
+.section-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.subscriptions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.subscription-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 24px;
+}
+
+.subscription-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.subscription-plan {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.subscription-status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.subscription-status.active {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.subscription-status.expired {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.subscription-details {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+}
+
+.subscription-details p {
+    margin-bottom: 8px;
+}
+
+.subscription-details p:last-child {
+    margin-bottom: 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 24px;
+    opacity: 0.3;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: white;
+}
+
+.skeleton {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-card {
+    height: 400px;
+}
+
+/* Responsive - Standard Breakpoints */
+
+/* Tablet: 768px - 1024px */
+@media (max-width: 1024px) and (min-width: 768px) {
+    .plans-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .subscriptions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Mobile: 0px - 767px */
+@media (max-width: 767px) {
+    .plans-container {
+        padding: 20px 16px;
+    }
+    
+    .plans-header {
+        margin-bottom: 24px;
+    }
+    
+    .plans-header h1 {
+        font-size: 1.75rem;
+    }
+    
+    .plans-header p {
+        font-size: 1rem;
+    }
+    
+    .plans-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+    
+    .plan-card {
+        padding: 24px;
+        border-radius: 16px;
+    }
+    
+    .plan-name {
+        font-size: 1.25rem;
+    }
+    
+    .plan-price {
+        font-size: 2.5rem;
+    }
+    
+    .plan-price span {
+        font-size: 0.9rem;
+    }
+    
+    .plan-feature {
+        padding: 10px 0;
+        font-size: 0.9rem;
+    }
+    
+    .plan-btn {
+        padding: 14px;
+        min-height: 48px;
+        font-size: 1rem;
+    }
+    
+    .subscriptions-section {
+        padding: 24px;
+        border-radius: 16px;
+    }
+    
+    .section-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .subscriptions-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .subscription-card {
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .subscription-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .subscription-plan {
+        font-size: 1.1rem;
+    }
+    
+    .empty-state {
+        padding: 48px 16px;
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.25rem;
+    }
+}
+
+/* Small Mobile: 0px - 479px */
+@media (max-width: 479px) {
+    .plans-container {
+        padding: 16px 12px;
+    }
+    
+    .plans-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .plans-header p {
+        font-size: 0.9rem;
+    }
+    
+    .plan-card {
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .plan-name {
+        font-size: 1.1rem;
+    }
+    
+    .plan-price {
+        font-size: 2rem;
+    }
+    
+    .plan-btn {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+    
+    .featured-badge {
+        padding: 4px 12px;
+        font-size: 0.7rem;
+    }
+}
+</style>
+
+<div class="plans-container">
+    <div class="plans-header">
+        <h1>Investment Plans</h1>
+        <p>Choose a plan that fits your investment goals and maximize your earnings.</p>
+    </div>
+
+    <div class="plans-grid" id="plan-list">
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+    </div>
+
+    <div class="subscriptions-section">
+        <div class="section-header">
+            <h2>Your Subscriptions</h2>
+        </div>
+        <div class="subscriptions-grid" id="subscription-list">
+            <div class="skeleton skeleton-card"></div>
+            <div class="skeleton skeleton-card"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    const planList = document.getElementById('plan-list');
+    const subscriptionList = document.getElementById('subscription-list');
+
+    function loadSubscriptions() {
+        fetch('/api/user-plans/?limit=20', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    subscriptionList.innerHTML = data.results.map(item => `
+                        <div class="subscription-card">
+                            <div class="subscription-header">
+                                <div class="subscription-plan">${item.plan.title}</div>
+                                <span class="subscription-status active">Active</span>
+                            </div>
+                            <div class="subscription-details">
+                                <p><strong>Investment:</strong> $${item.plan.amount}</p>
+                                <p><strong>Reward:</strong> $${item.plan.reward}</p>
+                                <p><strong>Multiplier:</strong> ${item.plan.reward_multiplier}x</p>
+                                <p><strong>Joined:</strong> ${new Date(item.joined_at).toLocaleDateString()}</p>
+                                <p><strong>Expires:</strong> ${new Date(item.expires_at).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    subscriptionList.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <h3>No active subscriptions</h3>
+                            <p>Join a plan to start earning rewards.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                subscriptionList.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h3>Error loading subscriptions</h3>
+                        <p>Please try again later.</p>
+                    </div>
+                `;
+            });
+    }
+
+    function loadPlans() {
+        fetch('/api/plans/?limit=20', { credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    planList.innerHTML = data.results.map((plan, index) => {
+                        const isFeatured = index === 1;
+                        return `
+                            <div class="plan-card ${isFeatured ? 'featured' : ''}">
+                                ${isFeatured ? '<div class="featured-badge">Popular</div>' : ''}
+                                <div class="plan-header">
+                                    <div class="plan-name">${plan.title}</div>
+                                    <div class="plan-price">$${plan.amount}<span>/one-time</span></div>
+                                    <div class="plan-duration">${plan.duration_days} days</div>
+                                </div>
+                                <div class="plan-features">
+                                    <div class="plan-feature">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Reward: $${plan.reward}</span>
+                                    </div>
+                                    <div class="plan-feature">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>${plan.reward_multiplier}x earnings multiplier</span>
+                                    </div>
+                                    <div class="plan-feature">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Daily limit: $${plan.daily_earning_limit}</span>
+                                    </div>
+                                    <div class="plan-feature">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>${plan.max_tasks_per_day} tasks per day</span>
+                                    </div>
+                                    <div class="plan-feature">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Priority support</span>
+                                    </div>
+                                </div>
+                                <button class="plan-btn" onclick="joinPlan(${plan.id}, this)">
+                                    <span class="btn-text">Join Plan</span>
+                                    <div class="spinner"></div>
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    planList.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">
+                                <i class="fas fa-inbox"></i>
+                            </div>
+                            <h3>No plans available</h3>
+                            <p>Check back later for new investment plans.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                planList.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <h3>Error loading plans</h3>
+                        <p>Please try again later.</p>
+                    </div>
+                `;
+            });
+    }
+
+    window.joinPlan = (planId, btn) => {
+        if (btn.classList.contains('loading')) return;
+        
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        apiFetch('/api/user-plans/', {
+            method: 'POST',
+            body: JSON.stringify({ plan_id: planId }),
+        })
+        .then(response => handleJsonResponse(response))
+        .then(data => {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            
+            btn.querySelector('.btn-text').textContent = 'Joined!';
+            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            alert('Successfully joined the plan. Your balance has been updated.');
+            if (typeof loadUserData === 'function') {
+                loadUserData();
+            }
+            setTimeout(() => {
+                loadPlans();
+                loadSubscriptions();
+            }, 1000);
+        })
+        .catch(error => {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            if (error && error.json) {
+                error.json().then(err => {
+                    const message = err.detail || err.message || 'Unable to join plan. Please check your wallet balance.';
+                    if (error.status === 403 || /insufficient/i.test(message)) {
+                        alert(message + ' Redirecting to the deposit panel...');
+                        window.location.href = '/wallet/';
+                    } else {
+                        alert(message);
+                    }
+                }).catch(() => {
+                    alert('Unable to join plan. Please check your wallet balance.');
+                });
+            } else {
+                alert('Unable to join plan. Please check your wallet balance.');
+            }
+        });
+    };
+
+    loadPlans();
+    loadSubscriptions();
+});
+</script>
+{% endblock %}

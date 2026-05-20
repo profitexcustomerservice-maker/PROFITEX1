@@ -1,0 +1,303 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Transactions Monitoring</h1>
+    <p class="page-subtitle">View and filter all system transactions</p>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <select id="filter-type" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <option value="">All Types</option>
+                <option value="TASK_REWARD">Task Reward</option>
+                <option value="DEPOSIT">Deposit</option>
+                <option value="WITHDRAWAL">Withdrawal</option>
+                <option value="PLAN_PURCHASE">Plan Purchase</option>
+                <option value="ADJUSTMENT">Adjustment</option>
+            </select>
+            <input type="date" id="filter-date" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+            <input type="text" id="search-transactions" placeholder="Search by user..." style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); width: 250px;">
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="filterTransactions()">Filter</button>
+            <button onclick="clearFilters()" class="secondary">Clear</button>
+            <button onclick="loadTransactions()">Refresh</button>
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>User</th>
+                    <th>Amount</th>
+                    <th>Reference</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="transactions-table-body">
+                <tr>
+                    <td colspan="7">
+                        <div class="loading">Loading transactions...</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="pagination" class="pagination" style="margin-top: 20px;"></div>
+</div>
+
+<div id="transaction-details-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeTransactionModal()">&times;</span>
+        <h2>Transaction Details</h2>
+        <div class="modal-body">
+            <div><strong>Transaction ID:</strong> <span id="detail-transaction-id"></span></div>
+            <div><strong>User ID:</strong> <span id="detail-user-id"></span></div>
+            <div><strong>User Email:</strong> <span id="detail-user-email"></span></div>
+            <div><strong>Type:</strong> <span id="detail-type"></span></div>
+            <div><strong>Amount:</strong> <span id="detail-amount"></span></div>
+            <div><strong>Reference:</strong> <span id="detail-reference"></span></div>
+            <div><strong>Date:</strong> <span id="detail-created-at"></span></div>
+        </div>
+    </div>
+</div>
+
+<style>
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.pagination button {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.pagination button:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.pagination button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.secondary {
+    background: var(--text-muted);
+    color: white;
+    border: none;
+}
+
+.secondary:hover {
+    background: var(--text-secondary);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 8% auto;
+    padding: 24px;
+    border-radius: 12px;
+    width: min(580px, 90%);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.close-modal {
+    float: right;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal-body {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    line-height: 1.6;
+}
+
+.modal-body div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.modal-body strong {
+    color: var(--text-default);
+}
+</style>
+
+<script>
+let currentPage = 1;
+let totalPages = 1;
+let allTransactionsData = [];
+let currentFilters = {
+    type: '',
+    date: '',
+    search: ''
+};
+
+window.addEventListener('DOMContentLoaded', () => {
+    allTransactionsData = JSON.parse('{{ transactions_json|escapejs }}');
+    renderTransactions(allTransactionsData);
+});
+
+async function loadTransactions() {
+    try {
+        const response = await apiFetch('/admin_panel/api/users/'); // reload via full page refresh keeps it simpler
+        location.reload();
+    } catch (error) {
+        location.reload();
+    }
+}
+
+function renderTransactions(data) {
+    const container = document.getElementById('transactions-table-body');
+    
+    if (!data || data.length === 0) {
+        container.innerHTML = '<tr><td colspan="7"><div class="no-data">No transactions found</div></td></tr>';
+        return;
+    }
+
+    container.innerHTML = data.map(tx => `
+        <tr>
+            <td>
+                <span class="badge ${getTypeBadgeClass(tx.transaction_type)}">
+                    ${formatTransactionType(tx.transaction_type)}
+                </span>
+            </td>
+            <td>
+                <div style="font-weight:600;">${tx.user_email || 'User #' + tx.user}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">ID: ${tx.id}</div>
+            </td>
+            <td>
+                <div style="font-weight:700; ${parseFloat(tx.amount) >= 0 ? 'color:var(--success)' : 'color:var(--danger)'}">
+                    ${parseFloat(tx.amount) >= 0 ? '+' : ''}$${tx.amount ? parseFloat(tx.amount).toFixed(2) : '0.00'}
+                </div>
+            </td>
+            <td>
+                <div style="font-family:monospace; font-size:0.8rem; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${tx.reference || ''}">
+                    ${tx.reference || '—'}
+                </div>
+            </td>
+            <td><span class="badge success">Completed</span></td>
+            <td>${tx.created_at ? formatDate(tx.created_at) : 'N/A'}</td>
+            <td>
+                <button onclick="viewTransactionDetails('${tx.id}')" style="padding:6px 12px; font-size:0.75rem;">View</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterTransactions() {
+    currentFilters.type   = document.getElementById('filter-type').value;
+    currentFilters.date   = document.getElementById('filter-date').value;
+    currentFilters.search = document.getElementById('search-transactions').value.toLowerCase();
+
+    const filtered = allTransactionsData.filter(tx => {
+        if (currentFilters.type && tx.transaction_type !== currentFilters.type) return false;
+        if (currentFilters.date && tx.created_at && !tx.created_at.startsWith(currentFilters.date)) return false;
+        if (currentFilters.search) {
+            const email = (tx.user_email || '').toLowerCase();
+            const ref   = (tx.reference || '').toLowerCase();
+            if (!email.includes(currentFilters.search) && !ref.includes(currentFilters.search)) return false;
+        }
+        return true;
+    });
+    renderTransactions(filtered);
+}
+
+function clearFilters() {
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-date').value = '';
+    document.getElementById('search-transactions').value = '';
+    currentFilters = { type: '', date: '', search: '' };
+    renderTransactions(allTransactionsData);
+}
+
+function viewTransactionDetails(transactionId) {
+    const transaction = allTransactionsData.find(tx => String(tx.id) === String(transactionId));
+    if (!transaction) {
+        showToast('Transaction not found', 'error');
+        return;
+    }
+
+    document.getElementById('detail-transaction-id').textContent = transaction.id;
+    document.getElementById('detail-user-id').textContent = transaction.user || 'N/A';
+    document.getElementById('detail-user-email').textContent = transaction.user_email || 'N/A';
+    document.getElementById('detail-type').textContent = formatTransactionType(transaction.transaction_type);
+    document.getElementById('detail-amount').textContent = `${parseFloat(transaction.amount) >= 0 ? '+' : ''}$${parseFloat(transaction.amount).toFixed(2)}`;
+    document.getElementById('detail-reference').textContent = transaction.reference || '—';
+    document.getElementById('detail-created-at').textContent = transaction.created_at ? formatDate(transaction.created_at) : 'N/A';
+
+    document.getElementById('transaction-details-modal').style.display = 'block';
+}
+
+function closeTransactionModal() {
+    document.getElementById('transaction-details-modal').style.display = 'none';
+}
+
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('transaction-details-modal');
+    if (event.target === modal) {
+        closeTransactionModal();
+    }
+});
+
+function formatTransactionType(type) {
+    const types = {
+        'TASK_REWARD':     'Task Reward',
+        'ACTIVITY_REWARD': 'Activity Reward',
+        'DEPOSIT':         'Deposit',
+        'WITHDRAWAL':      'Withdrawal',
+        'PLAN_PURCHASE':   'Plan Purchase',
+        'ADJUSTMENT':      'Adjustment'
+    };
+    return types[type] || type;
+}
+
+function getTypeBadgeClass(type) {
+    const typeMap = {
+        'TASK_REWARD':     'success',
+        'ACTIVITY_REWARD': 'success',
+        'DEPOSIT':         'info',
+        'WITHDRAWAL':      'danger',
+        'PLAN_PURCHASE':   'warning',
+        'ADJUSTMENT':      'info'
+    };
+    return typeMap[type] || 'info';
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+</script>
+{% endblock %}

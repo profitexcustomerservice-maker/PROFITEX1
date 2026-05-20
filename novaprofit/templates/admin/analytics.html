@@ -1,0 +1,215 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Analytics Dashboard</h1>
+    <p class="page-subtitle">System performance and user insights</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px;">
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">Revenue Overview</h3>
+        <div id="revenue-chart" style="height: 300px; background: var(--bg-main); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;">
+            <div class="loading">Loading chart...</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">User Growth</h3>
+        <div id="user-growth-chart" style="height: 300px; background: var(--bg-main); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;">
+            <div class="loading">Loading chart...</div>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px;">
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">Task Completion Stats</h3>
+        <div id="task-chart" style="height: 300px; background: var(--bg-main); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;">
+            <div class="loading">Loading chart...</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">Share Distribution</h3>
+        <div id="share-chart" style="height: 300px; background: var(--bg-main); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;">
+            <div class="loading">Loading chart...</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 20px;">Key Metrics</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        <div style="background: var(--primary-light); padding: 20px; border-radius: var(--radius-md);">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--primary); margin-bottom: 8px;" id="metric-users">0</div>
+            <div style="color: var(--text-secondary); font-size: 0.875rem;">Total Users</div>
+        </div>
+        <div style="background: var(--success-light); padding: 20px; border-radius: var(--radius-md);">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--success); margin-bottom: 8px;" id="metric-tasks">0</div>
+            <div style="color: var(--text-secondary); font-size: 0.875rem;">Tasks Completed</div>
+        </div>
+        <div style="background: var(--warning-light); padding: 20px; border-radius: var(--radius-md);">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--warning); margin-bottom: 8px;" id="metric-revenue">$0</div>
+            <div style="color: var(--text-secondary); font-size: 0.875rem;">Total Revenue</div>
+        </div>
+        <div style="background: var(--danger-light); padding: 20px; border-radius: var(--radius-md);">
+            <div style="font-size: 2rem; font-weight: 700; color: var(--danger); margin-bottom: 8px;" id="metric-active">0</div>
+            <div style="color: var(--text-secondary); font-size: 0.875rem;">Active Users</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    loadAnalytics();
+});
+
+async function loadAnalytics() {
+    try {
+        // Load users count
+        const usersResponse = await apiFetch('/api/auth/users/');
+        const usersData = await handleJsonResponse(usersResponse);
+        const usersCount = Array.isArray(usersData) ? usersData.length : (usersData.results ? usersData.results.length : 0);
+        document.getElementById('metric-users').textContent = usersCount || 0;
+        
+        const activeUsers = Array.isArray(usersData) 
+            ? usersData.filter(u => u.is_active).length 
+            : (usersData.results ? usersData.results.filter(u => u.is_active).length : 0);
+        document.getElementById('metric-active').textContent = activeUsers || 0;
+
+        // Load tasks count
+        const tasksResponse = await apiFetch('/api/user-tasks/');
+        const tasksData = await handleJsonResponse(tasksResponse);
+        const tasksCount = tasksData.count || (Array.isArray(tasksData) ? tasksData.length : (tasksData.results ? tasksData.results.length : 0));
+        document.getElementById('metric-tasks').textContent = tasksCount || 0;
+
+        // Load transactions for revenue
+        const transactionsResponse = await apiFetch('/api/transactions/');
+        const transactionsData = await handleJsonResponse(transactionsResponse);
+        
+        let totalRevenue = 0;
+        const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.results || []);
+        transactions.forEach(tx => {
+            if (parseFloat(tx.amount) > 0) {
+                totalRevenue += parseFloat(tx.amount);
+            }
+        });
+        document.getElementById('metric-revenue').textContent = `$${totalRevenue.toFixed(2)}`;
+
+        // Create charts
+        createRevenueChart();
+        createUserGrowthChart();
+        createTaskChart();
+        createShareChart();
+
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        showToast('Error loading analytics data', 'error');
+    }
+}
+
+function createRevenueChart() {
+    const ctx = document.getElementById('revenue-chart');
+    ctx.innerHTML = '<canvas></canvas>';
+    
+    new Chart(ctx.querySelector('canvas'), {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Revenue',
+                data: [1200, 1900, 3000, 5000, 4200, 6100],
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+function createUserGrowthChart() {
+    const ctx = document.getElementById('user-growth-chart');
+    ctx.innerHTML = '<canvas></canvas>';
+    
+    new Chart(ctx.querySelector('canvas'), {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'New Users',
+                data: [50, 75, 100, 125, 150, 200],
+                backgroundColor: '#10b981'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+
+function createTaskChart() {
+    const ctx = document.getElementById('task-chart');
+    ctx.innerHTML = '<canvas></canvas>';
+    
+    new Chart(ctx.querySelector('canvas'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Advertisement', 'Survey', 'Study'],
+            datasets: [{
+                data: [45, 30, 25],
+                backgroundColor: ['#6366f1', '#10b981', '#f59e0b']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+
+function createShareChart() {
+    const ctx = document.getElementById('share-chart');
+    ctx.innerHTML = '<canvas></canvas>';
+    
+    new Chart(ctx.querySelector('canvas'), {
+        type: 'pie',
+        data: {
+            labels: ['Basic', 'Silver', 'Gold'],
+            datasets: [{
+                data: [60, 25, 15],
+                backgroundColor: ['#6b7280', '#9ca3af', '#f59e0b']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

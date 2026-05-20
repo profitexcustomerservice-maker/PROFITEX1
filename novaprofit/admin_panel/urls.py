@@ -1,0 +1,68 @@
+from django.urls import path
+from .views import (
+    admin_login,
+    admin_logout,
+    admin_dashboard,
+    admin_users,
+    admin_tasks,
+    admin_plans,
+    admin_shares,
+    admin_withdrawals,
+
+    admin_transactions,
+    admin_analytics,
+    admin_settings,
+    api_users_list,
+    api_user_detail,
+    api_user_toggle_status,
+    api_user_delete,
+    api_withdrawals_list,
+    api_withdrawal_approve,
+    api_withdrawal_reject,
+    admin_crypto_deposits,
+    admin_payment_methods,
+    api_crypto_deposits_list,
+    api_crypto_deposit_approve,
+    api_crypto_deposit_reject,
+    payment_method_list,
+    payment_method_create,
+    payment_method_update,
+    payment_method_delete,
+    payment_method_toggle,
+)
+
+urlpatterns = [
+    path('login/', admin_login, name='admin_login'),
+    path('logout/', admin_logout, name='admin_logout'),
+    path('', admin_dashboard, name='admin_dashboard'),
+    # Template views
+    path('users/', admin_users, name='admin_users'),
+    path('tasks/', admin_tasks, name='admin_tasks'),
+    path('plans/', admin_plans, name='admin_plans'),
+    path('shares/', admin_shares, name='admin_shares'),
+    path('crypto-deposits/', admin_crypto_deposits, name='admin_crypto_deposits'),
+    path('payment-methods/', admin_payment_methods, name='admin_payment_methods'),
+    path('payment-methods/list/', payment_method_list, name='payment_method_list'),
+    path('payment-methods/create/', payment_method_create, name='payment_method_create'),
+    path('payment-methods/<int:pk>/edit/', payment_method_update, name='payment_method_update'),
+    path('payment-methods/<int:pk>/delete/', payment_method_delete, name='payment_method_delete'),
+    path('payment-methods/<int:pk>/toggle/', payment_method_toggle, name='payment_method_toggle'),
+    path('withdrawals/', admin_withdrawals, name='admin_withdrawals'),
+    path('transactions/', admin_transactions, name='admin_transactions'),
+    path('analytics/', admin_analytics, name='admin_analytics'),
+    path('settings/', admin_settings, name='admin_settings'),
+    # API endpoints for user management
+    path('api/users/', api_users_list, name='api_users_list'),
+    path('api/users/<int:user_id>/', api_user_detail, name='api_user_detail'),
+    path('api/users/<int:user_id>/toggle-status/', api_user_toggle_status, name='api_user_toggle_status'),
+    path('api/users/<int:user_id>/delete/', api_user_delete, name='api_user_delete'),
+    # API endpoints for withdrawal management
+    path('api/withdrawals/', api_withdrawals_list, name='api_withdrawals_list'),
+    path('api/withdrawals/<int:withdrawal_id>/approve/', api_withdrawal_approve, name='api_withdrawal_approve'),
+    path('api/withdrawals/<int:withdrawal_id>/reject/', api_withdrawal_reject, name='api_withdrawal_reject'),
+    # API endpoints for crypto deposit management
+    path('api/crypto-deposits/', api_crypto_deposits_list, name='api_crypto_deposits_list'),
+    path('api/crypto-deposits/<int:deposit_id>/approve/', api_crypto_deposit_approve, name='api_crypto_deposit_approve'),
+    path('api/crypto-deposits/<int:deposit_id>/reject/', api_crypto_deposit_reject, name='api_crypto_deposit_reject'),
+]
+

@@ -1,0 +1,324 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .profile-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    .profile-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .profile-avatar-wrapper {
+        position: relative;
+        width: 150px;
+        height: 150px;
+        margin: 0 auto 20px;
+        z-index: 1;
+    }
+
+    .profile-avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        background: #f0f0f0;
+    }
+
+    .edit-avatar-btn {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background: white;
+        color: #667eea;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+
+    .edit-avatar-btn:hover {
+        transform: scale(1.1);
+        color: #764ba2;
+    }
+
+    .profile-name {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 5px;
+    }
+
+    .profile-email {
+        font-size: 1rem;
+        opacity: 0.8;
+    }
+
+    .profile-content {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+
+    .profile-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 25px;
+        color: #2d3748;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .card-title i {
+        color: #667eea;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 8px;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #edf2f7;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-group input:focus {
+        border-color: #667eea;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(102,126,234,0.1);
+    }
+
+    .form-group input:disabled {
+        background: #f7fafc;
+        cursor: not-allowed;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 14px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 10px;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+    }
+
+    .submit-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .response-message {
+        margin-top: 20px;
+        padding: 12px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 0.9rem;
+        display: none;
+    }
+
+    .response-message.success {
+        display: block;
+        background: #f0fff4;
+        color: #2f855a;
+        border: 1px solid #c6f6d5;
+    }
+
+    .response-message.error {
+        display: block;
+        background: #fff5f5;
+        color: #c53030;
+        border: 1px solid #fed7d7;
+    }
+
+    #file-input {
+        display: none;
+    }
+
+    @media (max-width: 600px) {
+        .profile-header {
+            padding: 30px 20px;
+        }
+        .profile-name {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="profile-avatar-wrapper">
+            <img id="avatar-preview" src="{% if user.profile_image %}{{ user.profile_image.url }}{% else %}/static/images/default-avatar.png{% endif %}" alt="Profile" class="profile-avatar">
+            <label for="file-input" class="edit-avatar-btn">
+                <i class="fas fa-camera"></i>
+            </label>
+            <input type="file" id="file-input" accept="image/*" onchange="previewImage(event)">
+        </div>
+        <h1 class="profile-name">{{ user.first_name }} {{ user.last_name }}</h1>
+        <p class="profile-email">{{ user.email }}</p>
+    </div>
+
+    <div class="profile-content">
+        <div class="profile-card">
+            <h3 class="card-title">
+                <i class="fas fa-user-edit"></i>
+                Personal Information
+            </h3>
+            <form id="profile-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" id="p-first-name" value="{{ user.first_name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" id="p-last-name" value="{{ user.last_name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" value="{{ user.email }}" disabled>
+                    <p style="font-size:0.7rem; color:#a0aec0; margin-top:5px;">Email cannot be changed.</p>
+                </div>
+                <button type="submit" class="submit-btn" id="save-profile-btn">Save Changes</button>
+            </form>
+            <div id="profile-response" class="response-message"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewImage(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('avatar-preview');
+            output.src = reader.result;
+        };
+        reader.readAsDataURL(event.target.files[0]);
+    }
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('save-profile-btn');
+        const resp = document.getElementById('profile-response');
+        const fileInput = document.getElementById('file-input');
+        
+        btn.disabled = true;
+        btn.innerText = 'Updating...';
+        resp.className = 'response-message';
+        resp.innerText = '';
+        
+        const formData = new FormData();
+        formData.append('first_name', document.getElementById('p-first-name').value);
+        formData.append('last_name', document.getElementById('p-last-name').value);
+        
+        if (fileInput.files.length > 0) {
+            formData.append('profile_image', fileInput.files[0]);
+        }
+
+        try {
+            const response = await fetch('/api/auth/me/', {
+                method: 'PATCH',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                resp.innerText = 'Profile updated successfully!';
+                resp.className = 'response-message success';
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                const data = await response.json();
+                resp.innerText = 'Error: ' + (data.detail || 'Could not update profile');
+                resp.className = 'response-message error';
+            }
+        } catch (err) {
+            resp.innerText = 'Connection error. Please try again.';
+            resp.className = 'response-message error';
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Save Changes';
+        }
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}
