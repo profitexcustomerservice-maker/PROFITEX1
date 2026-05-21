@@ -29,16 +29,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 # Configure ALLOWED_HOSTS based on environment
 if DEBUG:
-    ALLOWED_HOSTS = [
-        "novaprofit.onrender.com",
-        ".onrender.com",
-        "localhost",
-        "127.0.0.1",
-        "testserver",
-        "*.localhost",
-        "0.0.0.0",
-        "*"  # Allow all hosts in development
-    ]
+    ALLOWED_HOSTS = ['*']
 else:
     ALLOWED_HOSTS = [
         "novaprofit.onrender.com",
