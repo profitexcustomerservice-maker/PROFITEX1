@@ -1,0 +1,91 @@
+services:
+  - type: web
+    name: novaprofit
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: daphne -b 0.0.0.0 -p 10000 novaprofit.asgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14
+      - key: DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        fromDatabase:
+          name: novaprofit
+          property: DJANGO_SECRET_KEY
+      - key: ALLOWED_HOSTS
+        value: "novaprofit.onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: novaprofit
+          property: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          name: novaprofit-redis
+          type: redis
+          property: connectionString
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: SECURE_HSTS_SECONDS
+        value: "31536000"
+      - key: SECURE_HSTS_INCLUDE_SUBDOMAINS
+        value: "True"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://novaprofit.onrender.com"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://novaprofit.onrender.com"
+
+  - type: redis
+    name: novaprofit-redis
+    plan: free
+    ipWhitelist: []
+
+  - type: pserv
+    name: novaprofit-celery-worker
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A novaprofit worker -l info --concurrency=2
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: novaprofit
+          property: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          name: novaprofit-redis
+          type: redis
+          property: connectionString
+      - key: DEBUG
+        value: "False"
+
+  - type: pserv
+    name: novaprofit-celery-beat
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A novaprofit beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: novaprofit
+          property: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          name: novaprofit-redis
+          type: redis
+          property: connectionString
+      - key: DEBUG
+        value: "False"
+
+databases:
+  - name: novaprofit
+    plan: free
+    version: "15"
+    initializer:
+      type: postgresql
+      plan: free
