@@ -32,7 +32,8 @@ if DEBUG:
     ALLOWED_HOSTS = [
     'novaprofit.onrender.com',
     'localhost',
-    '127.0.0.1'
+    '127.0.0.1',
+    'testserver'
 ]
 else:
     ALLOWED_HOSTS = [

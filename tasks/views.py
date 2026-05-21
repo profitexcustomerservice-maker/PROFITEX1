@@ -1,10 +1,11 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from .models import Task, UserTaskSubmission
 from .serializers import TaskSerializer, UserTaskSubmissionSerializer
 from django.shortcuts import get_object_or_404
-from wallet.models import Wallet, Transaction
+from wallet.models import Wallet, Transaction, CryptoDeposit
 from .services import credit_submission_reward
 from django.core.mail import send_mail
 from django.conf import settings
@@ -12,6 +13,14 @@ from django.utils import timezone
 from rest_framework.views import APIView
 from wallet.models import Transaction
 from decimal import Decimal
+
+
+def user_has_deposit(user):
+    """Check if user has made at least one approved deposit"""
+    return CryptoDeposit.objects.filter(
+        user=user,
+        status=CryptoDeposit.Status.APPROVED
+    ).exists()
 
 
 class PublicTaskViewSet(viewsets.ReadOnlyModelViewSet):
@@ -33,6 +42,12 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         return super().get_queryset().filter(user=user)
 
     def perform_create(self, serializer):
+        # Check if user has made a deposit first
+        if not user_has_deposit(self.request.user):
+            raise PermissionDenied(
+                detail="Please make a deposit first to work on tasks."
+            )
+        
         submission = serializer.save(user=self.request.user)
         # Optionally notify admins (simplified)
         # TODO: hook into notification system
