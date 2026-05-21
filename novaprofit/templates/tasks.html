@@ -451,6 +451,24 @@
     </div>
 </div>
 
+<div id="task-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="task-modal-title">Task preview</h3>
+            <span class="close" onclick="closeTaskModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="task-modal-body"></div>
+            <div id="task-modal-timer" style="margin-top: 16px; font-weight: 700; text-align: center;"></div>
+        </div>
+        <div class="modal-actions" style="display: flex; justify-content: space-between; gap: 12px; margin-top: 24px;">
+            <button id="task-modal-open-btn" class="task-btn" onclick="openTaskMedia()">Open Content</button>
+            <button id="task-modal-start-btn" class="task-btn" onclick="startTaskTimer()">Start Task</button>
+            <button id="task-modal-complete-btn" class="task-btn" onclick="submitTaskCompletion()" disabled>Complete Task</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const taskAccessAllowed = {{ task_access_allowed|yesno:"true,false" }};
 window.addEventListener('DOMContentLoaded', () => {
@@ -468,7 +486,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     <i class="fas fa-lock"></i>
                 </div>
                 <h3>Tasks are locked</h3>
-                <p>Deposit at least $50 to unlock tasks and rewards in your account.</p>
+                <p>Join a plan to unlock tasks and rewards in your account.</p>
             </div>
         `;
         completedList.innerHTML = `
@@ -477,7 +495,12 @@ window.addEventListener('DOMContentLoaded', () => {
                     <i class="fas fa-lock"></i>
                 </div>
                 <h3>Completed tasks are hidden</h3>
-                <p>Deposit at least $50 to view and complete tasks.</p>
+                <p>Join a plan to view your completed tasks.</p>
+            </div>
+        `;
+    }
+
+    tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             tabBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -488,6 +511,146 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
+
+    let activeTask = null;
+    let taskTimer = null;
+    let taskElapsed = 0;
+    let mediaOpened = false;
+    window.loadedTasksMap = window.loadedTasksMap || {};
+
+    function openTaskModal(taskId) {
+        activeTask = window.loadedTasksMap[taskId];
+        if (!activeTask) {
+            showToast('Unable to load task details.', 'error');
+            return;
+        }
+
+        taskElapsed = 0;
+        mediaOpened = false;
+        stopTaskTimer();
+
+        const body = document.getElementById('task-modal-body');
+        const timer = document.getElementById('task-modal-timer');
+        const openBtn = document.getElementById('task-modal-open-btn');
+        const startBtn = document.getElementById('task-modal-start-btn');
+        const completeBtn = document.getElementById('task-modal-complete-btn');
+
+        document.getElementById('task-modal-title').textContent = activeTask.title;
+        timer.textContent = `Required time: ${activeTask.duration} min`;
+        completeBtn.disabled = true;
+        startBtn.disabled = false;
+
+        let contentHtml = `<p><strong>Reward:</strong> $${activeTask.reward}</p>`;
+        contentHtml += `<p><strong>Duration:</strong> ${activeTask.duration} min</p>`;
+        contentHtml += `<p>${activeTask.description || 'No description provided.'}</p>`;
+
+        if (activeTask.media) {
+            contentHtml += `<p>This task requires viewing the provided content before completion.</p>`;
+            contentHtml += `<div class="task-media">`;
+            if (activeTask.media_type === 'video') {
+                contentHtml += `<video controls width="100%" preload="none"><source src="${activeTask.media}" type="video/mp4">Your browser does not support video.</video>`;
+            } else {
+                contentHtml += `<img src="${activeTask.media}" alt="Task content" />`;
+            }
+            contentHtml += `</div>`;
+            openBtn.style.display = 'inline-flex';
+        } else {
+            contentHtml += `<p>This task can be completed directly.</p>`;
+            openBtn.style.display = 'none';
+        }
+
+        body.innerHTML = contentHtml;
+        document.getElementById('task-modal').style.display = 'flex';
+    }
+
+    function closeTaskModal() {
+        stopTaskTimer();
+        document.getElementById('task-modal').style.display = 'none';
+    }
+
+    function openTaskMedia() {
+        if (!activeTask || !activeTask.media) {
+            showToast('No media to open for this task.', 'warning');
+            return;
+        }
+        window.open(activeTask.media, '_blank');
+        mediaOpened = true;
+        showToast('Task content opened. Start the timer when you are ready.', 'info');
+    }
+
+    function startTaskTimer() {
+        if (!activeTask) {
+            showToast('No active task selected.', 'warning');
+            return;
+        }
+
+        if (activeTask.media && !mediaOpened) {
+            showToast('Please open the task content first.', 'warning');
+            return;
+        }
+
+        if (taskTimer) {
+            return;
+        }
+
+        const timer = document.getElementById('task-modal-timer');
+        const completeBtn = document.getElementById('task-modal-complete-btn');
+        const requiredSeconds = activeTask.duration * 60;
+
+        taskTimer = setInterval(() => {
+            taskElapsed += 1;
+            const minutes = Math.floor(taskElapsed / 60);
+            const seconds = taskElapsed % 60;
+            timer.textContent = `Time spent: ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} (required ${activeTask.duration} min)`;
+
+            if (taskElapsed >= requiredSeconds) {
+                completeBtn.disabled = false;
+                showToast('You may now complete the task.', 'success');
+                stopTaskTimer();
+            }
+        }, 1000);
+    }
+
+    function stopTaskTimer() {
+        if (taskTimer) {
+            clearInterval(taskTimer);
+            taskTimer = null;
+        }
+    }
+
+    function submitTaskCompletion() {
+        if (!activeTask) {
+            showToast('No task selected.', 'error');
+            return;
+        }
+
+        const requiredSeconds = activeTask.duration * 60;
+        if (taskElapsed < requiredSeconds) {
+            showToast(`Please spend at least ${activeTask.duration} minutes on this task.`, 'warning');
+            return;
+        }
+
+        const completeBtn = document.getElementById('task-modal-complete-btn');
+        completeBtn.disabled = true;
+
+        apiFetch('/api/user-tasks/', {
+            method: 'POST',
+            body: JSON.stringify({ task_id: activeTask.id, duration_spent: taskElapsed }),
+        })
+        .then(response => response.json())
+        .then(_data => {
+            showToast('Task completed successfully.', 'success');
+            closeTaskModal();
+            setTimeout(() => {
+                loadTasks();
+                loadCompleted();
+            }, 1000);
+        })
+        .catch(() => {
+            showToast('Unable to complete task. Please try again.', 'error');
+            completeBtn.disabled = false;
+        });
+    }
 
     function loadCompleted() {
         fetch('/api/user-tasks/?limit=20', { credentials: 'same-origin' })
@@ -552,7 +715,7 @@ window.addEventListener('DOMContentLoaded', () => {
                                     : `<img src="${task.media}" alt="${task.title}">`}
                             </div>
                         ` : '';
-                        
+                        window.loadedTasksMap[task.id] = task;
                         return `
                             <div class="task-card">
                                 <div class="task-header">
@@ -568,8 +731,8 @@ window.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 </div>
                                 ${media}
-                                <button class="task-btn" onclick="completeTask(${task.id}, this)">
-                                    <span class="btn-text">Complete Task</span>
+                                <button class="task-btn" onclick="openTaskModal(${task.id})">
+                                    <span class="btn-text">Start Task</span>
                                     <div class="spinner"></div>
                                 </button>
                             </div>
@@ -599,6 +762,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 `;
             });
     }
+
+    window.openTaskModal = openTaskModal;
+    window.closeTaskModal = closeTaskModal;
+    window.openTaskMedia = openTaskMedia;
+    window.startTaskTimer = startTaskTimer;
+    window.submitTaskCompletion = submitTaskCompletion;
+    window.loadTasks = loadTasks;
+    window.loadCompleted = loadCompleted;
 
     window.completeTask = (taskId, btn) => {
         if (btn.classList.contains('loading')) return;

@@ -67,29 +67,36 @@ window.addEventListener('DOMContentLoaded', () => {
 
 async function loadAnalytics() {
     try {
+        function getListLength(data) {
+            if (Array.isArray(data)) return data.length;
+            if (data && Array.isArray(data.results)) return data.results.length;
+            return data && typeof data.count === 'number' ? data.count : 0;
+        }
+
+        function getListItems(data) {
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.results)) return data.results;
+            return [];
+        }
+
         // Load users count
         const usersResponse = await apiFetch('/api/auth/users/');
         const usersData = await handleJsonResponse(usersResponse);
-        const usersCount = Array.isArray(usersData) ? usersData.length : (usersData.results ? usersData.results.length : 0);
-        document.getElementById('metric-users').textContent = usersCount || 0;
-        
-        const activeUsers = Array.isArray(usersData) 
-            ? usersData.filter(u => u.is_active).length 
-            : (usersData.results ? usersData.results.filter(u => u.is_active).length : 0);
-        document.getElementById('metric-active').textContent = activeUsers || 0;
+        const users = getListItems(usersData);
+        document.getElementById('metric-users').textContent = getListLength(usersData) || 0;
+        document.getElementById('metric-active').textContent = users.filter(u => u.is_active).length || 0;
 
         // Load tasks count
         const tasksResponse = await apiFetch('/api/user-tasks/');
         const tasksData = await handleJsonResponse(tasksResponse);
-        const tasksCount = tasksData.count || (Array.isArray(tasksData) ? tasksData.length : (tasksData.results ? tasksData.results.length : 0));
-        document.getElementById('metric-tasks').textContent = tasksCount || 0;
+        document.getElementById('metric-tasks').textContent = getListLength(tasksData) || 0;
 
         // Load transactions for revenue
         const transactionsResponse = await apiFetch('/api/transactions/');
         const transactionsData = await handleJsonResponse(transactionsResponse);
-        
+
         let totalRevenue = 0;
-        const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData.results || []);
+        const transactions = getListItems(transactionsData);
         transactions.forEach(tx => {
             if (parseFloat(tx.amount) > 0) {
                 totalRevenue += parseFloat(tx.amount);
@@ -105,7 +112,11 @@ async function loadAnalytics() {
 
     } catch (error) {
         console.error('Error loading analytics:', error);
-        showToast('Error loading analytics data', 'error');
+        let message = 'Error loading analytics data';
+        if (error && error.message) {
+            message += `: ${error.message}`;
+        }
+        showToast(message, 'error');
     }
 }
 

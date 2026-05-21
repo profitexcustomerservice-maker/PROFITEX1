@@ -1,5 +1,8 @@
+from decimal import Decimal
 from rest_framework import serializers
 from .models import Transaction, Withdrawal, PaymentMethod, CryptoDeposit
+
+MINIMUM_CRYPTO_DEPOSIT_AMOUNT = Decimal('60.00')
 
 class TransactionSerializer(serializers.ModelSerializer):
     user_email = serializers.ReadOnlyField(source='user.email')
@@ -54,3 +57,10 @@ class CryptoDepositSerializer(serializers.ModelSerializer):
         model = CryptoDeposit
         fields = "__all__"
         read_only_fields = ("user", "status", "created_at", "processed_at")
+
+    def validate_amount(self, value):
+        if value < MINIMUM_CRYPTO_DEPOSIT_AMOUNT:
+            raise serializers.ValidationError(
+                f"Minimum deposit amount is ${MINIMUM_CRYPTO_DEPOSIT_AMOUNT:.2f}."
+            )
+        return value

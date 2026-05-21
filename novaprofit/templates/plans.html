@@ -451,6 +451,10 @@
         <p>Choose a plan that fits your investment goals and maximize your earnings.</p>
     </div>
 
+    <div id="active-plan-notice" style="display:none; margin-bottom: 24px; padding: 20px; border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; background: rgba(16, 185, 129, 0.08); color: #0f5132;">
+        You already have an active plan. New plan joins are disabled until your current subscription ends.
+    </div>
+
     <div class="plans-grid" id="plan-list">
         <div class="skeleton skeleton-card"></div>
         <div class="skeleton skeleton-card"></div>
@@ -470,14 +474,23 @@
 
 <script>
 window.addEventListener('DOMContentLoaded', () => {
+    const dataLoaded = typeof loadUserData === 'function'
+        ? loadUserData().catch(() => {})
+        : Promise.resolve();
+
     const planList = document.getElementById('plan-list');
     const subscriptionList = document.getElementById('subscription-list');
+    const activePlanNotice = document.getElementById('active-plan-notice');
+    let hasActivePlan = false;
 
     function loadSubscriptions() {
-        fetch('/api/user-plans/?limit=20', { credentials: 'same-origin' })
+        return fetch('/api/user-plans/?limit=20', { credentials: 'same-origin' })
             .then(response => response.json())
             .then(data => {
-                if (data.results && data.results.length > 0) {
+                hasActivePlan = Array.isArray(data.results) && data.results.length > 0;
+                activePlanNotice.style.display = hasActivePlan ? 'block' : 'none';
+
+                if (hasActivePlan) {
                     subscriptionList.innerHTML = data.results.map(item => `
                         <div class="subscription-card">
                             <div class="subscription-header">
@@ -486,10 +499,9 @@ window.addEventListener('DOMContentLoaded', () => {
                             </div>
                             <div class="subscription-details">
                                 <p><strong>Investment:</strong> $${item.plan.amount}</p>
-                                <p><strong>Reward:</strong> $${item.plan.reward}</p>
                                 <p><strong>Multiplier:</strong> ${item.plan.reward_multiplier}x</p>
+                                <p><strong>Duration:</strong> ${item.plan.duration_days} days</p>
                                 <p><strong>Joined:</strong> ${new Date(item.joined_at).toLocaleDateString()}</p>
-                                <p><strong>Expires:</strong> ${new Date(item.expires_at).toLocaleDateString()}</p>
                             </div>
                         </div>
                     `).join('');
@@ -519,46 +531,51 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadPlans() {
+        const walletBalance = window.currentWalletBalance || 0;
         fetch('/api/plans/?limit=20', { credentials: 'same-origin' })
             .then(response => response.json())
             .then(data => {
                 if (data.results && data.results.length > 0) {
                     planList.innerHTML = data.results.map((plan, index) => {
                         const isFeatured = index === 1;
+                        const planButton = hasActivePlan ? '' : `
+                            <button class="plan-btn" ${walletBalance < Number(plan.amount || 0) ? 'disabled' : ''} onclick="joinPlan(${plan.id}, this)">
+                                <span class="btn-text">${walletBalance < Number(plan.amount || 0) ? `Need $${(Number(plan.amount || 0) - walletBalance).toFixed(2)}` : 'Join Plan'}</span>
+                                <div class="spinner"></div>
+                            </button>
+                        `;
+
                         return `
                             <div class="plan-card ${isFeatured ? 'featured' : ''}">
                                 ${isFeatured ? '<div class="featured-badge">Popular</div>' : ''}
                                 <div class="plan-header">
-                                    <div class="plan-name">${plan.title}</div>
-                                    <div class="plan-price">$${plan.amount}<span>/one-time</span></div>
-                                    <div class="plan-duration">${plan.duration_days} days</div>
+                                    <div class="plan-name">${plan.title || `Plan ${plan.plan_level}`}</div>
+                                    <div class="plan-price">$${plan.amount || 0}<span>/one-time</span></div>
+                                    <div class="plan-duration">${plan.duration_days || 0} days</div>
                                 </div>
                                 <div class="plan-features">
                                     <div class="plan-feature">
                                         <i class="fas fa-check-circle"></i>
-                                        <span>Reward: $${plan.reward}</span>
+                                        <span>Plan Level: ${plan.plan_level || 'N/A'}</span>
                                     </div>
                                     <div class="plan-feature">
                                         <i class="fas fa-check-circle"></i>
-                                        <span>${plan.reward_multiplier}x earnings multiplier</span>
+                                        <span>${plan.reward_multiplier || 1}x earnings multiplier</span>
                                     </div>
                                     <div class="plan-feature">
                                         <i class="fas fa-check-circle"></i>
-                                        <span>Daily limit: $${plan.daily_earning_limit}</span>
+                                        <span>Daily limit: $${plan.daily_earning_limit || 0}</span>
                                     </div>
                                     <div class="plan-feature">
                                         <i class="fas fa-check-circle"></i>
-                                        <span>${plan.max_tasks_per_day} tasks per day</span>
+                                        <span>${plan.max_tasks_per_day || 0} tasks per day</span>
                                     </div>
                                     <div class="plan-feature">
                                         <i class="fas fa-check-circle"></i>
                                         <span>Priority support</span>
                                     </div>
                                 </div>
-                                <button class="plan-btn" onclick="joinPlan(${plan.id}, this)">
-                                    <span class="btn-text">Join Plan</span>
-                                    <div class="spinner"></div>
-                                </button>
+                                ${planButton}
                             </div>
                         `;
                     }).join('');
@@ -607,6 +624,10 @@ window.addEventListener('DOMContentLoaded', () => {
             alert('Successfully joined the plan. Your balance has been updated.');
             if (typeof loadUserData === 'function') {
                 loadUserData();
+            } else {
+                setTimeout(() => {
+                    if (typeof loadUserData === 'function') loadUserData();
+                }, 500);
             }
             setTimeout(() => {
                 loadPlans();
@@ -634,8 +655,10 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    loadPlans();
-    loadSubscriptions();
+    dataLoaded.finally(() => {
+        loadPlans();
+        loadSubscriptions();
+    });
 });
 </script>
 {% endblock %}

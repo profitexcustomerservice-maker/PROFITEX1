@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.db import connections, transaction
+from django.db import connections, transaction, IntegrityError
 from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.utils import timezone
@@ -21,15 +21,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def user_has_deposit_access(user):
+def user_can_do_tasks(user):
     if not user or not user.is_authenticated:
         return False
 
-    # Unconditionally allow admins and superusers to view/manage tasks
+    # Admins and superusers can still manage tasks
     if getattr(user, 'is_admin', False) or getattr(user, 'is_superuser', False):
         return True
 
-    minimum_deposit = Decimal('50.00')
+    minimum_deposit = Decimal('60.00')
 
     approved_crypto_total = CryptoDeposit.objects.filter(
         user=user,
@@ -41,7 +41,12 @@ def user_has_deposit_access(user):
         transaction_type=WalletTransaction.TransactionType.DEPOSIT
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-    return (approved_crypto_total + deposit_tx_total) >= minimum_deposit
+    has_joined_plan = UserPlan.objects.filter(user=user).exists()
+
+    if has_joined_plan:
+        return True
+
+    return (approved_crypto_total + deposit_tx_total) > minimum_deposit
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -58,7 +63,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         qs = Task.objects.select_related().all().order_by("-created_at")
         if self.request.user.is_authenticated and self.request.user.is_admin:
             return qs
-        if user_has_deposit_access(self.request.user):
+        # Show active tasks to all authenticated users
+        # Non-invested users can see tasks but cannot perform them (checked in UserTaskViewSet)
+        if self.request.user.is_authenticated:
             return qs.filter(active=True)
         return Task.objects.none()
 
@@ -72,6 +79,27 @@ class PlanViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated or not self.request.user.is_admin:
             return qs.filter(active=True)
         return qs
+    
+    def destroy(self, request, *args, **kwargs):
+        """Override destroy to provide clearer errors and prevent deleting plans
+        that have active user subscriptions.
+        """
+        try:
+            instance = self.get_object()
+
+            # Prevent deletion when there are existing subscriptions to avoid
+            # accidental cascade deletes and unclear errors on the client.
+            if hasattr(instance, 'subscriptions') and instance.subscriptions.exists():
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Cannot delete plan with active subscriptions. Remove subscriptions first.'
+                }, status=400)
+
+            self.perform_destroy(instance)
+            return JsonResponse({'success': True, 'message': 'Plan deleted successfully.'})
+        except Exception as e:
+            logger.exception(f"Error deleting plan: {e}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 class UserTaskViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = UserTaskSerializer
@@ -82,17 +110,23 @@ class UserTaskViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
         return UserTask.objects.filter(user=self.request.user).select_related("task").order_by("-completed_at")
 
     def perform_create(self, serializer):
-        if not user_has_deposit_access(self.request.user):
-            raise PermissionDenied("Tasks are available only after you deposit at least $50.")
+        if not user_can_do_tasks(self.request.user):
+            raise PermissionDenied("Tasks are available only after you deposit more than $60 and join a plan.")
 
         task = serializer.validated_data["task"]
+        duration_spent = serializer.validated_data.get("duration_spent", 0)
+
         if task.active is False:
             raise PermissionDenied("Task is not active")
-        
-        # Check if user has already completed this task
-        if UserTask.objects.filter(user=self.request.user, task=task).exists():
-            raise PermissionDenied("You have already completed this task")
-        
+
+        today = timezone.localdate()
+        if UserTask.objects.filter(user=self.request.user, task=task, completed_date=today).exists():
+            raise PermissionDenied("You can only complete this task once per day.")
+
+        required_seconds = int(task.duration or 0) * 60
+        if required_seconds > 0 and duration_spent < required_seconds:
+            raise PermissionDenied(f"You must spend at least {required_seconds} seconds on this task before completing it.")
+
         with transaction.atomic():
             # Save user task completion
             user_task = serializer.save(user=self.request.user)
@@ -141,24 +175,31 @@ class UserPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
         plan = serializer.validated_data["plan"]
         if plan.active is False:
             raise PermissionDenied("Plan is not active")
+
+        if UserPlan.objects.filter(user=self.request.user).exists():
+            raise PermissionDenied("You have already joined a plan.")
+
         with transaction.atomic():
             wallet, _ = Wallet.objects.get_or_create(user=self.request.user)
             if wallet.balance < plan.amount:
                 raise PermissionDenied("Insufficient balance to join plan")
-            
-            subscription = serializer.save(user=self.request.user)
-            
-            # Use safe subtract method to log the transaction
+
+            # Use safe subtract method first, then save the subscription.
             wallet.subtract_balance(
                 amount=plan.amount,
                 transaction_type=WalletTransaction.TransactionType.ADJUSTMENT,
-                reference=f"plan-{plan.id}-{subscription.id}",
+                reference=f"plan-{plan.id}-reserve",
             )
-            
+
+            try:
+                subscription = serializer.save(user=self.request.user)
+            except IntegrityError:
+                raise PermissionDenied("You have already joined a plan or this plan already exists for you.")
+
             # Update user plan level
             self.request.user.current_plan_level = plan.plan_level or 0
             self.request.user.save(update_fields=["current_plan_level"])
-            
+
             try:
                 Notification.objects.create(
                     user=self.request.user,
@@ -171,7 +212,7 @@ class UserPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
 @login_required
 def tasks_page(request):
     return render(request, "tasks.html", {
-        "task_access_allowed": user_has_deposit_access(request.user),
+        "task_access_allowed": user_can_do_tasks(request.user),
     })
 
 @login_required

@@ -5,6 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
 from django.utils import timezone
 from django.db import models, transaction
+from decimal import Decimal
 from accounts.models import User
 from wallet.models import Withdrawal, Transaction, Wallet, CryptoDeposit, PaymentMethod
 from core.models import Task, UserTask, Plan, UserPlan
@@ -273,12 +274,17 @@ def api_withdrawal_approve(request, withdrawal_id):
             withdrawal.processed_at = timezone.now()
             withdrawal.save(update_fields=["status", "processed_at"])
             
-            # Deduct balance (this helper method also creates a Transaction record)
-            wallet.subtract_balance(
-                amount=withdrawal.amount,
+            # Only deduct balance if the request was created before reserved-funds behavior was enabled.
+            if not Transaction.objects.filter(
+                wallet=wallet,
+                reference=withdrawal.reference,
                 transaction_type=Transaction.TransactionType.WITHDRAWAL,
-                reference=withdrawal.reference
-            )
+            ).exists():
+                wallet.subtract_balance(
+                    amount=withdrawal.amount,
+                    transaction_type=Transaction.TransactionType.WITHDRAWAL,
+                    reference=withdrawal.reference
+                )
             
             # Create system notification
             try:
@@ -325,6 +331,23 @@ def api_withdrawal_reject(request, withdrawal_id):
             withdrawal.status = Withdrawal.Status.REJECTED
             withdrawal.processed_at = timezone.now()
             withdrawal.save(update_fields=["status", "processed_at"])
+            
+            # Refund reserved funds if they were deducted during request creation
+            try:
+                wallet = withdrawal.user.wallet
+                referenced_tx = Transaction.objects.filter(
+                    wallet=wallet,
+                    reference=withdrawal.reference,
+                    transaction_type=Transaction.TransactionType.WITHDRAWAL,
+                ).first()
+                if referenced_tx:
+                    wallet.add_balance(
+                        amount=withdrawal.amount,
+                        transaction_type=Transaction.TransactionType.ADJUSTMENT,
+                        reference=f"REFUND-{withdrawal.reference}"
+                    )
+            except Wallet.DoesNotExist:
+                pass
             
             # Notify user
             try:
@@ -436,55 +459,17 @@ def api_crypto_deposits_list(request):
 @user_passes_test(is_admin, login_url='/admin_panel/login/')
 def api_crypto_deposit_approve(request, deposit_id):
     try:
-        from wallet.models import CryptoDeposit, Transaction, Wallet
+        from wallet.models import CryptoDeposit
         deposit = get_object_or_404(CryptoDeposit, id=deposit_id)
-        
+
         if deposit.status != CryptoDeposit.Status.PENDING:
             return JsonResponse({'success': False, 'error': 'Deposit already processed'}, status=400)
-            
+
         with transaction.atomic():
-            deposit.status = CryptoDeposit.Status.APPROVED
-            deposit.processed_at = timezone.now()
-            deposit.save(update_fields=["status", "processed_at"])
-            
-            # Update user balance
-            wallet, _ = Wallet.objects.get_or_create(user=deposit.user)
-            wallet.add_balance(
-                amount=deposit.amount,
-                transaction_type=Transaction.TransactionType.DEPOSIT,
-                reference=f"CRYPTO-{deposit.transaction_hash[:10]}"
-            )
-            
-            # Activate and sync user plan (Crucial Sync)
-            from core.models import Plan, UserPlan
-            deposit_amount = float(deposit.amount)
-            plan_level = 0
-            if deposit_amount >= 120: plan_level = 4
-            elif deposit_amount >= 80: plan_level = 3
-            elif deposit_amount >= 50: plan_level = 2
-            elif deposit_amount >= 20: plan_level = 1
-            
-            if plan_level > 0:
-                try:
-                    plan = Plan.objects.get(plan_level=plan_level, active=True)
-                    if not UserPlan.objects.filter(user=deposit.user, plan=plan).exists():
-                        UserPlan.objects.create(user=deposit.user, plan=plan)
-                    deposit.user.current_plan_level = plan_level
-                    deposit.user.save(update_fields=["current_plan_level"])
-                except Exception:
-                    pass
-
-            # Notify
-
-            try:
-                Notification.objects.create(
-                    user=deposit.user,
-                    title="Crypto Deposit Approved",
-                    message=f"Your crypto deposit of ${deposit.amount} has been approved.",
-                )
-            except: pass
-            
-        return JsonResponse({'success': True, 'status': 'approved', 'balance': str(deposit.user.wallet.balance)})
+            wallet = deposit.approve()
+        return JsonResponse({'success': True, 'status': 'approved', 'balance': str(wallet.balance)})
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 

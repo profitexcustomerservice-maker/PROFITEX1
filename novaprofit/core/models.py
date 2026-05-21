@@ -130,9 +130,10 @@ class UserTask(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="completed_tasks")
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="completions")
     completed_at = models.DateTimeField(auto_now_add=True)
+    completed_date = models.DateField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "task")
+        unique_together = ("user", "task", "completed_date")
         ordering = ("-completed_at",)
 
     def __str__(self):

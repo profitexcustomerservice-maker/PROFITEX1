@@ -1,15 +1,27 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from .models import User
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    email = serializers.EmailField(
+        validators=[
+            UniqueValidator(
+                queryset=User.objects.all(),
+                message="An account with this email already exists."
+            )
+        ]
+    )
 
     class Meta:
         model = User
         fields = ("email", "password", "first_name", "last_name")
 
     def create(self, validated_data):
+        # Normalize email to lower-case for consistent uniqueness checks
+        validated_data['email'] = validated_data.get('email', '').strip().lower()
         return User.objects.create_user(**validated_data)
 
 class UserSerializer(serializers.ModelSerializer):

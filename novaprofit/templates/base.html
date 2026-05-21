@@ -1231,14 +1231,18 @@ function toggleMobileMenu() {
 
 // Load user data
 function loadUserData() {
-    fetch('/api/auth/me/', { credentials: 'same-origin' })
+    return fetch('/api/auth/me/', { credentials: 'same-origin' })
         .then(handleJsonResponse)
         .then(data => {
-            if (data.wallet_balance) {
-                document.getElementById('header-balance').textContent = `$${data.wallet_balance.toFixed(2)}`;
-            }
+            const balance = Number(data.wallet_balance) || 0;
+            window.currentWalletBalance = balance;
+            document.getElementById('header-balance').textContent = `$${balance.toFixed(2)}`;
+            return data;
         })
-        .catch(() => {});
+        .catch(() => {
+            window.currentWalletBalance = 0;
+            return {};
+        });
 }
 
 // Load notification count

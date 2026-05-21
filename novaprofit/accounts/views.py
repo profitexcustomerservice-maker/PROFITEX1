@@ -66,12 +66,9 @@ def dashboard(request):
     """User dashboard view"""
     # Get user wallet balance
     from wallet.models import Wallet
-    try:
-        wallet = Wallet.objects.get(user=request.user)
-        balance = wallet.balance
-    except Wallet.DoesNotExist:
-        balance = 0.00
-        
+    wallet, _ = Wallet.objects.get_or_create(user=request.user)
+    balance = wallet.balance
+    
     # Get current plan
     from core.models import UserPlan
     current_plan = UserPlan.objects.filter(user=request.user).first()

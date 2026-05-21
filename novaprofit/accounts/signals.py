@@ -8,7 +8,8 @@ from .models import User
 @receiver(post_save, sender=User)
 def create_wallet_for_user(sender, instance, created, **kwargs):
     if created:
-        Wallet.objects.create(user=instance)
+        # Use get_or_create to prevent duplicate key errors
+        Wallet.objects.get_or_create(user=instance)
         # Send welcome notification
         try:
             Notification.objects.create(

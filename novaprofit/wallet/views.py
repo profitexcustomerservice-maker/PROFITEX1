@@ -91,23 +91,23 @@ class WithdrawalViewSet(viewsets.ModelViewSet):
         # Check if user has sufficient balance
         try:
             wallet = self.request.user.wallet
-            from django.db.models import Sum
-            pending_sum = Withdrawal.objects.filter(
-                user=self.request.user, 
-                status=Withdrawal.Status.PENDING
-            ).aggregate(Sum('amount'))['amount__sum'] or 0
-            
-            if (wallet.balance - pending_sum) < amount:
-                raise serializers.ValidationError({"amount": f"Insufficient available balance (Pending: ${pending_sum})"})
+            if wallet.balance < amount:
+                raise serializers.ValidationError({"amount": "Insufficient balance."})
         except Wallet.DoesNotExist:
             raise serializers.ValidationError({"amount": "No wallet found"})
         
-        # Create withdrawal with PENDING status
-        withdrawal = serializer.save(
-            user=self.request.user,
-            status=Withdrawal.Status.PENDING,
-            reference=f"WDL-{timezone.now().strftime('%Y%m%d%H%M%S')}"
-        )
+        # Reserve funds immediately by creating the withdrawal and deducting the amount
+        with db_transaction.atomic():
+            withdrawal = serializer.save(
+                user=self.request.user,
+                status=Withdrawal.Status.PENDING,
+                reference=f"WDL-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+            )
+            wallet.subtract_balance(
+                amount=amount,
+                transaction_type=Transaction.TransactionType.WITHDRAWAL,
+                reference=withdrawal.reference
+            )
         
         # Send notification (with error handling)
         try:
@@ -127,24 +127,27 @@ class WithdrawalViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Transaction already processed."}, status=status.HTTP_400_BAD_REQUEST)
         
         with db_transaction.atomic():
-            # Validate sufficient balance
             wallet = withdrawal.user.wallet
-            if wallet.balance < withdrawal.amount:
-                return Response({"detail": "Insufficient funds."}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Update withdrawal status
             withdrawal.status = Withdrawal.Status.APPROVED
             withdrawal.processed_at = timezone.now()
             withdrawal.save(update_fields=["status", "processed_at"])
             
-            # Use safe wallet method to subtract balance
-            wallet.subtract_balance(
-                amount=withdrawal.amount,
+            # No additional deduction needed if funds were reserved during request creation.
+            # For legacy withdrawals without an earlier reserved transaction, deduct now.
+            existing_tx = Transaction.objects.filter(
+                wallet=wallet,
+                reference=withdrawal.reference,
                 transaction_type=Transaction.TransactionType.WITHDRAWAL,
-                reference=withdrawal.reference
-            )
+            ).exists()
+            if not existing_tx:
+                if wallet.balance < withdrawal.amount:
+                    return Response({"detail": "Insufficient funds."}, status=status.HTTP_400_BAD_REQUEST)
+                wallet.subtract_balance(
+                    amount=withdrawal.amount,
+                    transaction_type=Transaction.TransactionType.WITHDRAWAL,
+                    reference=withdrawal.reference
+                )
             
-            # Send notification (with error handling)
             try:
                 Notification.objects.create(
                     user=withdrawal.user,
@@ -152,10 +155,10 @@ class WithdrawalViewSet(viewsets.ModelViewSet):
                     message=f"Your withdrawal of ${withdrawal.amount} was approved. Your balance has been updated.",
                 )
             except Exception as e:
-                # Log error but don't fail the approval
                 pass
         
-        return Response({"status": "approved", "balance": str(withdrawal.user.wallet.balance)})
+        wallet.refresh_from_db()
+        return Response({"status": "approved", "balance": str(wallet.balance)})
 
     @action(detail=True, methods=["post"], permission_classes=[IsAdminUserCustom])
     def reject(self, request, pk=None):
@@ -218,33 +221,15 @@ class CryptoDepositViewSet(viewsets.ModelViewSet):
         deposit = self.get_object()
         if deposit.status != CryptoDeposit.Status.PENDING:
             return Response({"detail": "Transaction already processed."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        with db_transaction.atomic():
-            deposit.status = CryptoDeposit.Status.APPROVED
-            deposit.processed_at = timezone.now()
-            deposit.save(update_fields=["status", "processed_at"])
-            
-            # Update wallet
-            wallet, _ = Wallet.objects.get_or_create(user=deposit.user)
-            wallet.add_balance(
-                amount=deposit.amount,
-                transaction_type=Transaction.TransactionType.DEPOSIT,
-                reference=f"CRYPTO-{deposit.transaction_hash[:10]}"
-            )
-            
-            # Update user plan based on deposit amount (Business Rule Migration)
-            self._activate_user_plan(deposit.user, deposit.amount)
-            
-            # Notification
-            try:
-                Notification.objects.create(
-                    user=deposit.user,
-                    title="Crypto Deposit Approved",
-                    message=f"Your crypto deposit of ${deposit.amount} has been approved.",
-                )
-            except: pass
-            
-        return Response({"status": "approved", "balance": str(deposit.user.wallet.balance)})
+
+        try:
+            wallet = deposit.approve()
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"status": "approved", "balance": str(wallet.balance)})
 
     def _activate_user_plan(self, user, deposit_amount):
         """Activate or update user plan based on deposit amount (Crypto Only Version)"""

@@ -12,8 +12,12 @@ from wallet.models import Withdrawal, Wallet
 User = get_user_model()
 user, created = User.objects.get_or_create(email="test@example.com", defaults={"password": "test"})
 wallet, _ = Wallet.objects.get_or_create(user=user)
-wallet.balance = 200.00
-wallet.save()
+# Use add_balance to ensure a Transaction is created and balance stays consistent
+wallet.add_balance(
+	amount=200.00,
+	transaction_type=Transaction.TransactionType.ADJUSTMENT,
+	reference='TEST-INITIAL-200'
+)
 
 client = Client()
 client.force_login(user)

@@ -46,13 +46,14 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Plan Type</label>
-                        <select name="plan_type" required
+                        <select name="plan_level" required
                             style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
-                            <option value="basic">Basic (Level 1)</option>
-                            <option value="silver">Silver (Level 2)</option>
-                            <option value="gold">Gold (Level 3)</option>
-                            <option value="platinum">Platinum (Level 4)</option>
+                            <option value="1">Basic (Level 1)</option>
+                            <option value="2">Silver (Level 2)</option>
+                            <option value="3">Gold (Level 3)</option>
+                            <option value="4">Platinum (Level 4)</option>
                         </select>
+                        <div id="plan-level-warning" style="display:none; color:#d9534f; font-size:0.9rem; margin-top:8px;">This plan level already exists. Choose a different level.</div>
                     </div>
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 600;">Price ($)</label>
@@ -376,12 +377,7 @@
             form.querySelector('[name="title"]').value = plan.title || '';
             form.querySelector('[name="description"]').value = plan.description || '';
 
-            let planType = 'basic';
-            if (plan.plan_level === 4) planType = 'platinum';
-            else if (plan.plan_level === 3) planType = 'gold';
-            else if (plan.plan_level === 2) planType = 'silver';
-
-            form.querySelector('[name="plan_type"]').value = planType;
+            form.querySelector('[name="plan_level"]').value = plan.plan_level || 1;
             form.querySelector('[name="amount"]').value = plan.amount || '';
             form.querySelector('[name="reward_multiplier"]').value = plan.reward_multiplier || 1;
             form.querySelector('[name="daily_earning_limit"]').value = plan.daily_earning_limit || 50;
@@ -395,11 +391,7 @@
                     const form = document.getElementById('plan-form');
                     form.querySelector('[name="title"]').value = plan.title || '';
                     form.querySelector('[name="description"]').value = plan.description || '';
-                    let planType = 'basic';
-                    if (plan.plan_level === 4) planType = 'platinum';
-                    else if (plan.plan_level === 3) planType = 'gold';
-                    else if (plan.plan_level === 2) planType = 'silver';
-                    form.querySelector('[name="plan_type"]').value = planType;
+                    form.querySelector('[name="plan_level"]').value = plan.plan_level || 1;
                     form.querySelector('[name="amount"]').value = plan.amount || '';
                     form.querySelector('[name="reward_multiplier"]').value = plan.reward_multiplier || 1;
                     form.querySelector('[name="daily_earning_limit"]').value = plan.daily_earning_limit || 50;
@@ -415,15 +407,44 @@
         editingPlanId = null;
     }
 
+    function checkPlanLevelUnique() {
+        const form = document.getElementById('plan-form');
+        const warning = document.getElementById('plan-level-warning');
+        if (!form || !warning) {
+            return true;
+        }
+
+        const selectedLevel = parseInt(form.querySelector('[name="plan_level"]').value, 10);
+        const duplicate = allPlans.some(plan => Number(plan.plan_level) === selectedLevel && String(plan.id) !== String(editingPlanId));
+
+        if (duplicate) {
+            warning.style.display = 'block';
+            warning.textContent = 'This plan level already exists. Please choose a different level.';
+            return false;
+        }
+
+        warning.style.display = 'none';
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const planLevelSelect = document.querySelector('[name="plan_level"]');
+        if (planLevelSelect) {
+            planLevelSelect.addEventListener('change', checkPlanLevelUnique);
+        }
+    });
+
     document.getElementById('plan-form').addEventListener('submit', async function (e) {
         e.preventDefault();
 
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        if (!checkPlanLevelUnique()) {
+            showToast('Please select a different plan level before saving.', 'error');
+            return;
+        }
+
         const formData = new FormData(this);
-        const pType = formData.get('plan_type');
-        let planLevel = 1;
-        if (pType === 'platinum') planLevel = 4;
-        else if (pType === 'gold')     planLevel = 3;
-        else if (pType === 'silver')   planLevel = 2;
+        const planLevel = parseInt(formData.get('plan_level'), 10) || 1;
 
         const data = {
             title: formData.get('title'),
@@ -437,9 +458,8 @@
             active: true
         };
 
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
+        submitButton.disabled = true;
+        submitButton.textContent = 'Saving...';
 
         try {
             const url = editingPlanId ? `/api/plans/${editingPlanId}/` : '/api/plans/';
@@ -463,8 +483,9 @@
             console.error('Error saving plan:', error);
             showToast('Error saving plan', 'error');
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Save Plan';
+            // Restore submit button state (fix variable name typo)
+            submitButton.disabled = false;
+            submitButton.textContent = 'Save Plan';
         }
     });
 
@@ -478,11 +499,12 @@
                 method: 'DELETE'
             });
 
+            const data = await response.json().catch(() => ({}));
             if (response.ok) {
-                showToast('Plan deleted successfully', 'success');
+                showToast(data.message || 'Plan deleted successfully', 'success');
                 loadPlans();
             } else {
-                showToast('Error deleting plan', 'error');
+                showToast(data.error || 'Error deleting plan', 'error');
             }
         } catch (error) {
             console.error('Error deleting plan:', error);

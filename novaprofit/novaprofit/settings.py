@@ -25,13 +25,25 @@ def _is_placeholder(value):
     }
 
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="replace-me")
-DEBUG = False
-ALLOWED_HOSTS = [
-    "novaprofit.onrender.com",
-    ".onrender.com",
-    "localhost",
-    "127.0.0.1"
-]
+DEBUG = config("DEBUG", default=False, cast=bool)
+
+# Configure ALLOWED_HOSTS based on environment
+if DEBUG:
+    ALLOWED_HOSTS = [
+        "novaprofit.onrender.com",
+        ".onrender.com",
+        "localhost",
+        "127.0.0.1",
+        "testserver",
+        "*.localhost",
+        "0.0.0.0",
+        "*"  # Allow all hosts in development
+    ]
+else:
+    ALLOWED_HOSTS = [
+        "novaprofit.onrender.com",
+        ".onrender.com",
+    ]
 
 if not DEBUG and _is_placeholder(SECRET_KEY):
     raise ValueError("DJANGO_SECRET_KEY must be set in production")

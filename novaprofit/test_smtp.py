@@ -41,12 +41,12 @@ try:
         fail_silently=False,
     )
 
-    print(f"\n✅ SUCCESS: Test email sent successfully")
+    print(f"\nSUCCESS: Test email sent successfully")
     print(f"   Return value: {result}")
-    print("✅ Please check your inbox (and spam folder) for the test email.")
+    print("Please check your inbox (and spam folder) for the test email.")
 
 except Exception as e:
-    print(f"\n❌ ERROR: Failed to send email")
+    print(f"\nERROR: Failed to send email")
     print(f"   Error Type: {type(e).__name__}")
     print(f"   Error Message: {str(e)}")
     print("\nCommon fixes:")
