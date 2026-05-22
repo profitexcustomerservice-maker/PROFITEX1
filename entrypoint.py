@@ -90,9 +90,27 @@ try:
     if superuser_email and superuser_password:
         if User.objects.filter(email=superuser_email).exists():
             user = User.objects.get(email=superuser_email)
-            print(f"✓ Superuser '{superuser_email}' already exists")
+            # Ensure superuser flags are set
+            updated = False
+            if not user.is_staff:
+                user.is_staff = True
+                updated = True
+            if not user.is_superuser:
+                user.is_superuser = True
+                updated = True
+            if not user.is_admin:
+                user.is_admin = True
+                updated = True
+            if not user.is_active:
+                user.is_active = True
+                updated = True
+            if updated:
+                user.save()
+                print(f"✓ Updated existing superuser flags")
+            print(f"✓ Superuser '{superuser_email}' exists and verified")
             print(f"  - is_staff: {user.is_staff}")
             print(f"  - is_superuser: {user.is_superuser}")
+            print(f"  - is_admin: {user.is_admin}")
             print(f"  - is_active: {user.is_active}")
         else:
             user = User.objects.create_superuser(
@@ -102,6 +120,7 @@ try:
             print(f"✓ Created superuser: {superuser_email}")
             print(f"  - is_staff: {user.is_staff}")
             print(f"  - is_superuser: {user.is_superuser}")
+            print(f"  - is_admin: {user.is_admin}")
             print(f"  - is_active: {user.is_active}")
             print(f"  Access admin at: /admin/")
     else:
