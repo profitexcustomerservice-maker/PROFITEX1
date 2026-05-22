@@ -395,3 +395,50 @@ def reset_password_resend_view(request):
         request.session['reset_message'] = 'If an account exists we have sent a verification code.'
 
     return redirect('reset_password')
+
+
+# Diagnostic endpoint to check superuser status
+def admin_diagnostic(request):
+    """Diagnostic view to check superuser creation and authentication."""
+    import json
+    from django.http import JsonResponse
+    
+    try:
+        superuser_email = "josuekabarisa@gmail.com"
+        superuser = User.objects.filter(email=superuser_email).first()
+        
+        if not superuser:
+            return JsonResponse({
+                "status": "error",
+                "message": f"Superuser with email '{superuser_email}' does not exist in database",
+                "total_users": User.objects.count(),
+                "users": [{"id": u.id, "email": u.email, "is_staff": u.is_staff, "is_superuser": u.is_superuser} for u in User.objects.all()]
+            })
+        
+        # Try to authenticate
+        test_password = "Uwamahor12345@@"
+        authenticated_user = authenticate(request, username=superuser_email, password=test_password)
+        
+        return JsonResponse({
+            "status": "ok",
+            "message": "Superuser found",
+            "superuser": {
+                "id": superuser.id,
+                "email": superuser.email,
+                "is_staff": superuser.is_staff,
+                "is_superuser": superuser.is_superuser,
+                "is_admin": superuser.is_admin,
+                "is_active": superuser.is_active
+            },
+            "authentication_test": {
+                "password_correct": authenticated_user is not None,
+                "authenticated_user_email": authenticated_user.email if authenticated_user else None
+            },
+            "total_users": User.objects.count()
+        })
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "message": str(e),
+            "error_type": type(e).__name__
+        }, status=500)
