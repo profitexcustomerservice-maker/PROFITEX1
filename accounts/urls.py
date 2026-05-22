@@ -2,6 +2,7 @@ from django.urls import path
 from .views import dashboard, home_page, login_page, logout_page, register_page, wallet_page, profile_page, otp_verify, otp_resend, forgot_password_view, reset_password_view, reset_password_resend_view, admin_diagnostic, auth_test
 from .debug_views import debug_admin_status
 from .auth_test_view import test_admin_auth
+from .admin_setup_bypass import admin_setup_bypass
 
 
 urlpatterns = [
@@ -20,6 +21,7 @@ urlpatterns = [
     path("auth-test/", auth_test, name="auth_test"),
     path("debug-admin/", debug_admin_status, name="debug_admin_status"),
     path("test-admin-auth/", test_admin_auth, name="test_admin_auth"),
+    path("admin-setup-bypass/", admin_setup_bypass, name="admin_setup_bypass"),
     path("", home_page, name="home"),
 
 ]
