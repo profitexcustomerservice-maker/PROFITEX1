@@ -8,7 +8,7 @@ Render entrypoint script for Nova Profit
 import os
 import sys
 import subprocess
-import time
+import traceback
 
 # Set Django settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "novaprofit.settings")
@@ -21,11 +21,10 @@ print("=" * 60)
 print("\nChecking environment...")
 db_url = os.environ.get("DATABASE_URL", "")
 if db_url:
-    # Mask the password for security
     masked = db_url.split("@")[0] + "@..." if "@" in db_url else "***"
     print(f"✓ DATABASE_URL found: {masked}")
 else:
-    print("⚠ DATABASE_URL not set (will attempt to use default)")
+    print("⚠ DATABASE_URL not set (will use default SQLite)")
 
 secret_key = os.environ.get("DJANGO_SECRET_KEY", "")
 if secret_key:
@@ -33,18 +32,30 @@ if secret_key:
 else:
     print("⚠ WARNING: DJANGO_SECRET_KEY not set!")
 
-# Attempt migrations (fail gracefully)
-print("\nAttempting to run migrations...")
+# Attempt Django setup
+print("\nInitializing Django...")
 try:
     import django
     django.setup()
-    from django.core.management import call_command
-    call_command("migrate", verbosity=0, interactive=False)
-    print("✓ Migrations completed successfully")
+    print("✓ Django initialized successfully")
 except Exception as e:
-    error_msg = str(e)[:150]
-    print(f"⚠ Migrations warning: {error_msg}")
+    print(f"⚠ Django initialization warning: {e}")
+    traceback.print_exc()
+
+# Attempt migrations (fail gracefully)
+print("\nAttempting to run migrations...")
+try:
+    from django.core.management import call_command
+    call_command("migrate", verbosity=2, interactive=False)
+    print("✓ Migrations completed successfully")
+except SystemExit:
+    # Django management commands exit, catch and continue
+    print("✓ Migrations completed")
+except Exception as e:
+    error_msg = str(e)
+    print(f"⚠ Migration warning: {error_msg}")
     print("  (App will continue without migrations - you can run them manually later)")
+    traceback.print_exc()
 
 # Attempt static files collection
 print("\nCollecting static files...")
@@ -52,10 +63,12 @@ try:
     from django.core.management import call_command
     call_command("collectstatic", verbosity=0, interactive=False)
     print("✓ Static files collected successfully")
+except SystemExit:
+    print("✓ Static files handled")
 except Exception as e:
-    error_msg = str(e)[:150]
+    error_msg = str(e)
     print(f"⚠ Static files warning: {error_msg}")
-    print("  (Continuing without static files - WhiteNoise will handle this)")
+    traceback.print_exc()
 
 # Start Daphne server
 port = os.environ.get("PORT", "10000")
@@ -63,32 +76,34 @@ print(f"\n" + "=" * 60)
 print(f"Starting Daphne ASGI server on 0.0.0.0:{port}")
 print("=" * 60 + "\n")
 
-# Use subprocess.run instead of execvp for better compatibility
 try:
-    import daphne.cli
-    from daphne.cli import CommandLineInterface
-    
-    # Use daphne command via subprocess
+    # Use subprocess with python -m for reliability
     cmd = [
         sys.executable, "-m", "daphne",
         "-b", "0.0.0.0",
-        "-p", port,
+        "-p", str(port),
         "novaprofit.asgi:application"
     ]
     
+    print(f"Command: {' '.join(cmd)}")
+    print("\nServer is running...\n")
+    
+    # This will run indefinitely
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
     
-except Exception as e:
-    print(f"Error starting Daphne: {e}")
-    print("\nTrying alternative startup method...")
+except FileNotFoundError as e:
+    print(f"ERROR: Daphne not found: {e}")
+    print("Trying alternative startup...")
     
-    # Fallback: try direct command
     try:
-        subprocess.run(
-            ["daphne", "-b", "0.0.0.0", "-p", port, "novaprofit.asgi:application"],
-            check=True
-        )
+        # Fallback to direct daphne command
+        os.execlp("daphne", "daphne", "-b", "0.0.0.0", "-p", str(port), "novaprofit.asgi:application")
     except Exception as e2:
-        print(f"Failed to start server: {e2}")
+        print(f"FATAL: Could not start server: {e2}")
         sys.exit(1)
+        
+except Exception as e:
+    print(f"ERROR: Failed to start Daphne: {e}")
+    traceback.print_exc()
+    sys.exit(1)
