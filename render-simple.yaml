@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: novaprofit
+    env: python
+    plan: free
+    buildCommand: |
+      echo "Installing dependencies..."
+      pip install -r requirements.txt --quiet
+      echo "Collecting static files..."
+      python manage.py collectstatic --noinput --clear --quiet
+      echo "Build complete!"
+    startCommand: daphne -b 0.0.0.0 -p 10000 novaprofit.asgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14
+      - key: DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        value: "your-secret-key-here-change-me"
+      - key: ALLOWED_HOSTS
+        value: "novaprofit.onrender.com"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: novaprofit
+          property: DATABASE_URL
+      - key: REDIS_URL
+        value: "redis://localhost:6379/0"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://novaprofit.onrender.com"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://novaprofit.onrender.com"
+      - key: EMAIL_HOST_USER
+        value: "your-email@gmail.com"
+      - key: EMAIL_HOST_PASSWORD
+        value: "your-app-password"
+
+  - type: redis
+    name: novaprofit-redis
+    plan: free
+
+databases:
+  - name: novaprofit
+    plan: free
+    version: "15"
+    initializer:
+      type: postgresql
+      plan: free
