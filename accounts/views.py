@@ -182,11 +182,7 @@ def register_page(request):
                 last_name=last_name
             )
             logger.info(f"USER CREATED: {user.email}")
-            
-            # Create wallet for user
-            from wallet.models import Wallet
-            Wallet.objects.create(user=user)
-            logger.info(f"WALLET CREATED for {user.email}")
+            # Wallet is automatically created by signal in accounts.signals
 
             authenticated_user = authenticate(request, username=email, password=password)
             if authenticated_user:
