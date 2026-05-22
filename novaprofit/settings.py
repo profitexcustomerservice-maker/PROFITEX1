@@ -203,7 +203,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.environ.get("REDIS_URL", "")  # Empty by default, only use if explicitly set
 
 # Validate Redis URL - must start with redis://, rediss://, or unix://
 def _is_valid_redis_url(url):
