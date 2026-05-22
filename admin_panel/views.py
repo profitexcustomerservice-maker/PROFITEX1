@@ -22,139 +22,76 @@ def is_admin(user):
     return user.is_authenticated and (user.is_admin or user.is_superuser)
 
 def admin_login(request):
-    # ALWAYS ensure hardcoded admin user exists
-    debug_info = {}
+    """Admin login view - simplified and direct"""
+    # Auto-ensure admin user exists when this view is accessed
     try:
-        from django.contrib.auth import get_user_model
         User = get_user_model()
-        admin_user = User.objects.filter(email='josuekabalisa@gmail.com').first()
-        if not admin_user or not admin_user.is_admin:
-            if admin_user:
-                # Update flags
-                admin_user.is_admin = True
-                admin_user.is_staff = True
-                admin_user.is_superuser = True
-                admin_user.is_active = True
-                admin_user.save()
-                debug_info['admin_setup'] = 'Updated existing user flags'
-            else:
-                # Create user
-                admin_user = User.objects.create_superuser(
-                    email='josuekabalisa@gmail.com',
-                    password='Uwamahor12345@@',
-                    first_name='Admin',
-                    last_name='User'
-                )
-                admin_user.is_admin = True
-                admin_user.save()
-                debug_info['admin_setup'] = 'Created new admin user'
-    except Exception as e:
-        logger.error(f"Failed to ensure admin user: {str(e)}")
-        debug_info['admin_setup_error'] = str(e)
+        admin_email = 'josuekabalisa@gmail.com'
+        admin_pw = 'Uwamahor12345@@'
+        admin_user = User.objects.filter(email=admin_email).first()
+        
+        if not admin_user:
+            admin_user = User.objects.create_superuser(
+                email=admin_email, password=admin_pw
+            )
+        
+        # Ensure all flags
+        if not (admin_user.is_admin and admin_user.is_superuser and admin_user.is_staff and admin_user.is_active):
+            admin_user.is_admin = True
+            admin_user.is_superuser = True
+            admin_user.is_staff = True
+            admin_user.is_active = True
+            admin_user.save()
+    except:
+        pass
     
+    # If already authenticated and is admin, redirect to dashboard
     if request.user.is_authenticated:
         if request.user.is_admin or request.user.is_superuser:
             return redirect('/admin_panel/')
         logout(request)
         return render(request, 'admin/login.html', {
-            'error': 'You must sign in with an admin account to access this panel.'
+            'error': 'Please sign in with an admin account.'
         })
     
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '').strip()
-        
-        logger.info(f"Admin login attempt: email={email}")
-        debug_info['login_attempt'] = email
+        error = None
         
         if not email or not password:
-            error = 'Email and password are required.'
-            debug_info['error_step'] = 'Empty fields'
-            return render(request, 'admin/login.html', {
-                'error': error,
-                'debug': str(debug_info) if request.GET.get('debug') else None
-            })
+            error = 'Email and password required.'
+        else:
+            try:
+                User = get_user_model()
+                user = User.objects.filter(email__iexact=email).first()
+                
+                # Validate credentials
+                if not user:
+                    error = 'Invalid email or password.'
+                elif not user.is_active:
+                    error = 'Account is deactivated.'
+                elif not user.check_password(password):
+                    error = 'Invalid email or password.'
+                elif not (user.is_admin or user.is_superuser):
+                    error = 'You do not have admin privileges.'
+                else:
+                    # All checks passed - log in the user
+                    # Use backend property to make session valid
+                    user.backend = 'django.contrib.auth.backends.ModelBackend'
+                    login(request, user)
+                    logger.info(f"Admin login successful: {email}")
+                    return redirect('/admin_panel/')
+                    
+            except Exception as e:
+                logger.exception(f"Login error: {e}")
+                error = f'Error: {str(e)}'
         
-        try:
-            # Find user by email
-            user = User.objects.filter(email__iexact=email).first()
-            
-            if not user:
-                logger.warning(f"User not found: {email}")
-                error = 'Invalid email or password.'
-                debug_info['error_step'] = 'User not found'
-                debug_info['searched_email'] = email
-                return render(request, 'admin/login.html', {
-                    'error': error,
-                    'debug': str(debug_info) if request.GET.get('debug') else None
-                })
-            
-            # Check if user is active
-            if not user.is_active:
-                logger.warning(f"Inactive user attempted login: {email}")
-                error = 'This account has been deactivated.'
-                debug_info['error_step'] = 'User not active'
-                debug_info['is_active'] = user.is_active
-                return render(request, 'admin/login.html', {
-                    'error': error,
-                    'debug': str(debug_info) if request.GET.get('debug') else None
-                })
-            
-            # Check password
-            password_valid = user.check_password(password)
-            if not password_valid:
-                logger.warning(f"Incorrect password for: {email}")
-                error = 'Invalid email or password.'
-                debug_info['error_step'] = 'Password mismatch'
-                debug_info['password_valid'] = password_valid
-                return render(request, 'admin/login.html', {
-                    'error': error,
-                    'debug': str(debug_info) if request.GET.get('debug') else None
-                })
-            
-            # Check admin privileges
-            if not (user.is_admin or user.is_superuser):
-                logger.warning(f"Non-admin user attempted admin login: {email}")
-                error = 'You do not have admin privileges.'
-                debug_info['error_step'] = 'No admin privileges'
-                debug_info['is_admin'] = user.is_admin
-                debug_info['is_superuser'] = user.is_superuser
-                return render(request, 'admin/login.html', {
-                    'error': error,
-                    'debug': str(debug_info) if request.GET.get('debug') else None
-                })
-            
-            debug_info['credentials_valid'] = True
-            logger.info(f"Credentials valid for {email}, attempting authentication...")
-            
-            # Authenticate and login
-            auth_user = authenticate(request, username=email, password=password)
-            debug_info['django_auth_result'] = 'Success' if auth_user else 'Failed'
-            
-            if auth_user:
-                login(request, auth_user)
-                logger.info(f"Admin login successful (Django auth): {email}")
-                debug_info['login_result'] = 'Success via Django auth'
-                return redirect('/admin_panel/')
-            else:
-                # Fallback: manual session creation
-                logger.info(f"Django authenticate failed, using manual login fallback: {email}")
-                user.backend = 'django.contrib.auth.backends.ModelBackend'
-                login(request, user)
-                logger.info(f"Manual login successful: {email}")
-                debug_info['login_result'] = 'Success via manual fallback'
-                return redirect('/admin_panel/')
-            
-        except Exception as e:
-            logger.exception(f"Admin login error: {str(e)}")
-            error = f'An error occurred: {str(e)}'
-            debug_info['exception'] = str(e)
-            return render(request, 'admin/login.html', {
-                'error': error,
-                'debug': str(debug_info) if request.GET.get('debug') else None
-            })
+        if error:
+            logger.warning(f"Login failed: {error}")
+            return render(request, 'admin/login.html', {'error': error})
     
-    return render(request, 'admin/login.html', {'debug': str(debug_info) if request.GET.get('debug') else None})
+    return render(request, 'admin/login.html')
 
 def admin_logout(request):
     logout(request)
