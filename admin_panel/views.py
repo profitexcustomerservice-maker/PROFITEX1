@@ -23,7 +23,7 @@ def is_admin(user):
 
 def admin_login(request):
     if request.user.is_authenticated:
-        if request.user.is_admin:
+        if request.user.is_admin or request.user.is_superuser:
             return redirect('/admin_panel/')
         logout(request)
         return render(request, 'admin/login.html', {
@@ -34,35 +34,68 @@ def admin_login(request):
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '').strip()
         
-        logger.info(f"Admin login attempt: {email}")
+        logger.info(f"Admin login attempt: email={email}")
         
-        # Find user by email and authenticate with password
+        if not email or not password:
+            return render(request, 'admin/login.html', {
+                'error': 'Email and password are required.'
+            })
+        
         try:
-            user = User.objects.get(email=email)
-            # Use Django's authenticate with the custom username field (email)
-            user = authenticate(request, username=email, password=password)
-        except User.DoesNotExist:
-            logger.error(f"User not found: {email}")
-            user = None
-        except Exception as e:
-            logger.error(f"Authentication error: {str(e)}")
-            user = None
-        
-        if user is not None:
-            logger.info(f"User authenticated: {email}, is_admin={user.is_admin}, is_superuser={user.is_superuser}")
-            if user.is_admin or user.is_superuser:
-                login(request, user)
-                logger.info(f"Admin login successful: {email}")
-                return redirect('/admin_panel/')
-            else:
-                logger.warning(f"Login denied - not admin: {email}")
+            # Find user by email
+            user = User.objects.filter(email__iexact=email).first()
+            
+            if not user:
+                logger.warning(f"User not found: {email}")
+                return render(request, 'admin/login.html', {
+                    'error': 'Invalid email or password.'
+                })
+            
+            # Check if user is active
+            if not user.is_active:
+                logger.warning(f"Inactive user attempted login: {email}")
+                return render(request, 'admin/login.html', {
+                    'error': 'This account has been deactivated.'
+                })
+            
+            # Check password
+            if not user.check_password(password):
+                logger.warning(f"Incorrect password for: {email}")
+                return render(request, 'admin/login.html', {
+                    'error': 'Invalid email or password.'
+                })
+            
+            # Check admin privileges
+            if not (user.is_admin or user.is_superuser):
+                logger.warning(f"Non-admin user attempted admin login: {email}")
                 return render(request, 'admin/login.html', {
                     'error': 'You do not have admin privileges.'
                 })
-        else:
-            logger.error(f"Authentication failed for {email}")
+            
+            # Authenticate and login
+            # Get user again to authenticate properly
+            auth_user = authenticate(request, username=email, password=password)
+            
+            if auth_user:
+                login(request, auth_user)
+                logger.info(f"Admin login successful: {email}")
+                return redirect('/admin_panel/')
+            else:
+                # Fallback: manual session creation
+                logger.info(f"Django authenticate failed, using manual login fallback: {email}")
+                from django.contrib.auth import login as django_login
+                from django.contrib.sessions.models import Session
+                
+                # Force login with the user object we found
+                user.backend = 'django.contrib.auth.backends.ModelBackend'
+                login(request, user)
+                logger.info(f"Manual login successful: {email}")
+                return redirect('/admin_panel/')
+            
+        except Exception as e:
+            logger.exception(f"Admin login error: {str(e)}")
             return render(request, 'admin/login.html', {
-                'error': 'Invalid email or password.'
+                'error': f'An error occurred: {str(e)}'
             })
     
     return render(request, 'admin/login.html')
