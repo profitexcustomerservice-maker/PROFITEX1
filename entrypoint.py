@@ -81,17 +81,6 @@ try:
     from django.contrib.auth import get_user_model
     User = get_user_model()
     
-# Create superuser if credentials provided
-print("\nSetting up superuser...")
-try:
-    # Import Django setup first
-    import django
-    if not django.apps.apps.ready:
-        django.setup()
-    
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    
     superuser_email = os.environ.get("SUPERUSER_EMAIL", "").strip()
     superuser_password = os.environ.get("SUPERUSER_PASSWORD", "").strip()
     
