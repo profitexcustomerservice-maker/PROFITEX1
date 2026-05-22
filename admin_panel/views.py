@@ -31,20 +31,36 @@ def admin_login(request):
         })
     
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '').strip()
         
-        user = authenticate(request, username=email, password=password)
+        logger.info(f"Admin login attempt: {email}")
+        
+        # Find user by email and authenticate with password
+        try:
+            user = User.objects.get(email=email)
+            # Use Django's authenticate with the custom username field (email)
+            user = authenticate(request, username=email, password=password)
+        except User.DoesNotExist:
+            logger.error(f"User not found: {email}")
+            user = None
+        except Exception as e:
+            logger.error(f"Authentication error: {str(e)}")
+            user = None
         
         if user is not None:
-            if user.is_admin:
+            logger.info(f"User authenticated: {email}, is_admin={user.is_admin}, is_superuser={user.is_superuser}")
+            if user.is_admin or user.is_superuser:
                 login(request, user)
+                logger.info(f"Admin login successful: {email}")
                 return redirect('/admin_panel/')
             else:
+                logger.warning(f"Login denied - not admin: {email}")
                 return render(request, 'admin/login.html', {
                     'error': 'You do not have admin privileges.'
                 })
         else:
+            logger.error(f"Authentication failed for {email}")
             return render(request, 'admin/login.html', {
                 'error': 'Invalid email or password.'
             })
