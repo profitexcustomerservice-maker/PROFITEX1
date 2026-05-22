@@ -451,11 +451,12 @@ def auth_test(request):
     from django.contrib.auth import authenticate
     import traceback
     
-    if request.method != 'POST':
-        return JsonResponse({"error": "POST required"}, status=400)
+    # Support both POST and GET for easier testing
+    email = request.POST.get('email') or request.GET.get('email', '').strip()
+    password = request.POST.get('password') or request.GET.get('password', '').strip()
     
-    email = request.POST.get('email', '').strip()
-    password = request.POST.get('password', '').strip()
+    if not request.method in ['POST', 'GET']:
+        return JsonResponse({"error": "POST or GET required"}, status=400)
     
     logger.info(f"AUTH TEST: Attempting authentication for {email}")
     
@@ -464,7 +465,7 @@ def auth_test(request):
     
     try:
         # Step 1: Check if user exists
-        user = User.objects.filter(email=email).first()
+        user = User.objects.filter(email__iexact=email).first()
         user_exists = user is not None
         
         step1_result = {
