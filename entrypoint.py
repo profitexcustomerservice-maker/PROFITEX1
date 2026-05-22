@@ -70,6 +70,35 @@ except Exception as e:
     print(f"⚠ Static files warning: {error_msg}")
     traceback.print_exc()
 
+# Create superuser if credentials provided
+print("\nSetting up superuser...")
+try:
+    from django.contrib.auth.models import User
+    
+    superuser_username = os.environ.get("SUPERUSER_USERNAME", "").strip()
+    superuser_password = os.environ.get("SUPERUSER_PASSWORD", "").strip()
+    superuser_email = os.environ.get("SUPERUSER_EMAIL", "").strip()
+    
+    if superuser_username and superuser_password and superuser_email:
+        if User.objects.filter(username=superuser_username).exists():
+            print(f"✓ Superuser '{superuser_username}' already exists")
+        else:
+            User.objects.create_superuser(
+                username=superuser_username,
+                email=superuser_email,
+                password=superuser_password
+            )
+            print(f"✓ Created superuser: {superuser_username}")
+            print(f"  Email: {superuser_email}")
+            print(f"  Access admin at: /admin/")
+    else:
+        print("⚠ Superuser credentials not set (SUPERUSER_USERNAME, SUPERUSER_PASSWORD, SUPERUSER_EMAIL)")
+        print("  Skipping superuser creation")
+except Exception as e:
+    error_msg = str(e)
+    print(f"⚠ Superuser creation warning: {error_msg}")
+    traceback.print_exc()
+
 # Start Daphne server
 port = os.environ.get("PORT", "10000")
 print(f"\n" + "=" * 60)
