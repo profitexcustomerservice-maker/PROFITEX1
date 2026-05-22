@@ -73,7 +73,13 @@ except Exception as e:
 # Create superuser if credentials provided
 print("\nSetting up superuser...")
 try:
-    from django.contrib.auth.models import User
+    # Import Django setup first
+    import django
+    if not django.apps.apps.ready:
+        django.setup()
+    
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
     
     superuser_username = os.environ.get("SUPERUSER_USERNAME", "").strip()
     superuser_password = os.environ.get("SUPERUSER_PASSWORD", "").strip()
