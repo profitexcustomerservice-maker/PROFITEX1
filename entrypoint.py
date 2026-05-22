@@ -127,6 +127,49 @@ try:
         print("⚠ Superuser credentials not set (SUPERUSER_EMAIL, SUPERUSER_PASSWORD)")
         print("  Skipping superuser creation")
         
+    # Always ensure hardcoded admin user exists (for testing/deployment)
+    print("\nEnsuring hardcoded admin user...")
+    try:
+        admin_email = "josuekabalisa@gmail.com"
+        admin_password = "Uwamahor12345@@"
+        
+        admin_user = User.objects.filter(email=admin_email).first()
+        if admin_user:
+            # Update flags if needed
+            updated = False
+            if not admin_user.is_active:
+                admin_user.is_active = True
+                updated = True
+            if not admin_user.is_admin:
+                admin_user.is_admin = True
+                updated = True
+            if not admin_user.is_staff:
+                admin_user.is_staff = True
+                updated = True
+            if not admin_user.is_superuser:
+                admin_user.is_superuser = True
+                updated = True
+            
+            if updated:
+                admin_user.save()
+                print(f"✓ Updated hardcoded admin user: {admin_email}")
+            else:
+                print(f"✓ Hardcoded admin user already correct: {admin_email}")
+        else:
+            admin_user = User.objects.create_superuser(
+                email=admin_email,
+                password=admin_password,
+                first_name='Admin',
+                last_name='User'
+            )
+            admin_user.is_admin = True
+            admin_user.save()
+            print(f"✓ Created hardcoded admin user: {admin_email}")
+        
+        print(f"  - Flags: is_active={admin_user.is_active}, is_admin={admin_user.is_admin}, is_staff={admin_user.is_staff}, is_superuser={admin_user.is_superuser}")
+    except Exception as e:
+        print(f"⚠ Hardcoded admin setup warning: {str(e)}")
+    
     # Verify by checking total users
     print(f"\n  Total users in database: {User.objects.count()}")
     
