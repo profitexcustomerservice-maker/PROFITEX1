@@ -204,7 +204,19 @@ SIMPLE_JWT = {
 }
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-if DEBUG:
+
+# Validate Redis URL - must start with redis://, rediss://, or unix://
+def _is_valid_redis_url(url):
+    if not url:
+        return False
+    normalized = str(url).strip().lower()
+    # Check if it's a valid Redis URL or a placeholder
+    if normalized.startswith(('(render', 'your_', 'change')):
+        return False
+    return normalized.startswith(('redis://', 'rediss://', 'unix://'))
+
+# Configure Channels based on environment and Redis availability
+if DEBUG or not _is_valid_redis_url(REDIS_URL):
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
@@ -220,7 +232,12 @@ else:
         },
     }
 
-CELERY_BROKER_URL = REDIS_URL
+# Configure Celery based on Redis availability
+if DEBUG or not _is_valid_redis_url(REDIS_URL):
+    CELERY_BROKER_URL = "redis://localhost:6379/0"
+else:
+    CELERY_BROKER_URL = REDIS_URL
+    
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_BEAT_SCHEDULE = {
     "reward_active_users": {
@@ -242,7 +259,9 @@ else:
 
 # Cache and session settings for faster request performance
 REDIS_CACHE_URL = os.environ.get('REDIS_CACHE_URL', REDIS_URL)
-if DEBUG:
+
+if DEBUG or not _is_valid_redis_url(REDIS_CACHE_URL):
+    # Use local cache in development or if Redis URL is invalid
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -250,6 +269,7 @@ if DEBUG:
         }
     }
 else:
+    # Use Redis in production with valid URL
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
