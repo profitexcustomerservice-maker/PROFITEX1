@@ -13,8 +13,8 @@ def generate_otp():
 
 
 def send_otp_email(user, otp):
-    """Send OTP email to user with basic debug logging."""
-    subject = "[Profitx] Your Verification Code"
+    """Send OTP email to user with enhanced debugging."""
+    subject = "[Profitex] Your Verification Code"
     plain_message = (
         f"Your OTP code is: {otp}\n\n"
         "This code will expire in 5 minutes.\n\n"
@@ -33,15 +33,18 @@ def send_otp_email(user, otp):
     from_email = settings.DEFAULT_FROM_EMAIL
     recipient_list = [recipient_email]
 
-    print("\n=== EMAIL SENDING DEBUG ===")
-    print(f"Sending to: {recipient_email}")
+    print("\n" + "="*60)
+    print("EMAIL SENDING DEBUG")
+    print("="*60)
+    print(f"Recipient: {recipient_email}")
     print(f"From: {from_email}")
     print(f"Email Backend: {settings.EMAIL_BACKEND}")
     print(f"Email Host: {settings.EMAIL_HOST}")
     print(f"Email Port: {settings.EMAIL_PORT}")
     print(f"Email User: {settings.EMAIL_HOST_USER}")
     print(f"Email Password Set: {bool(settings.EMAIL_HOST_PASSWORD)}")
-    print("========================\n")
+    print(f"TLS Enabled: {settings.EMAIL_USE_TLS}")
+    print("="*60 + "\n")
 
     max_attempts = 3
     backoff_seconds = 1
@@ -61,18 +64,31 @@ def send_otp_email(user, otp):
             # attach HTML alternative
             email.attach_alternative(html_message, "text/html")
             email.send(fail_silently=False)
-            print(f"EMAIL SENT SUCCESSFULLY to {recipient_email} (attempt {attempt})")
+            print(f"✓ EMAIL SENT SUCCESSFULLY to {recipient_email} (attempt {attempt})")
             return True
         except Exception as exc:
-            print(f"EMAIL ERROR on attempt {attempt} for {recipient_email}: {exc}")
-            print(f"Error Type: {type(exc).__name__}")
+            error_type = type(exc).__name__
+            error_msg = str(exc)
+            print(f"✗ EMAIL ERROR on attempt {attempt}/{max_attempts}")
+            print(f"  Type: {error_type}")
+            print(f"  Message: {error_msg}")
+            print(f"  Recipient: {recipient_email}")
+            
             import traceback
-            print("Full Traceback:")
-            traceback.print_exc()
+            print("  Traceback:")
+            for line in traceback.format_exc().split('\n'):
+                if line.strip():
+                    print(f"    {line}")
+            
             if attempt == max_attempts:
+                print(f"✗ EMAIL FAILED after {max_attempts} attempts!")
                 return False
+            
+            print(f"  Retrying in {backoff_seconds} seconds...")
             time.sleep(backoff_seconds)
             backoff_seconds *= 2
+    
+    return False
 
 
 def queue_send_otp_email(user, otp):

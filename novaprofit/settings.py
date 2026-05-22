@@ -292,9 +292,20 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'profitexcustomerservice@gmail.com'
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = "Profitx Customer Service <profitexcustomerservice@gmail.com>"
+# Read from environment variables - CRITICAL FIX
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'profitexcustomerservice@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+# Use email from environment or fallback
+DEFAULT_FROM_EMAIL = f"Profitx Support <{EMAIL_HOST_USER}>"
+
+# If no password set, use console backend for debugging
+if not EMAIL_HOST_PASSWORD:
+    if DEBUG:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    else:
+        # In production, warn but continue
+        import warnings
+        warnings.warn('EMAIL_HOST_PASSWORD not set! Emails will be sent to console.')
 
 # SendGrid configuration (recommended for production)
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
