@@ -81,25 +81,51 @@ try:
     from django.contrib.auth import get_user_model
     User = get_user_model()
     
+# Create superuser if credentials provided
+print("\nSetting up superuser...")
+try:
+    # Import Django setup first
+    import django
+    if not django.apps.apps.ready:
+        django.setup()
+    
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
     superuser_email = os.environ.get("SUPERUSER_EMAIL", "").strip()
     superuser_password = os.environ.get("SUPERUSER_PASSWORD", "").strip()
     
+    print(f"  EMAIL configured: {bool(superuser_email)}")
+    print(f"  PASSWORD configured: {bool(superuser_password)}")
+    
     if superuser_email and superuser_password:
         if User.objects.filter(email=superuser_email).exists():
+            user = User.objects.get(email=superuser_email)
             print(f"✓ Superuser '{superuser_email}' already exists")
+            print(f"  - is_staff: {user.is_staff}")
+            print(f"  - is_superuser: {user.is_superuser}")
+            print(f"  - is_active: {user.is_active}")
         else:
-            User.objects.create_superuser(
+            user = User.objects.create_superuser(
                 email=superuser_email,
                 password=superuser_password
             )
             print(f"✓ Created superuser: {superuser_email}")
+            print(f"  - is_staff: {user.is_staff}")
+            print(f"  - is_superuser: {user.is_superuser}")
+            print(f"  - is_active: {user.is_active}")
             print(f"  Access admin at: /admin/")
     else:
         print("⚠ Superuser credentials not set (SUPERUSER_EMAIL, SUPERUSER_PASSWORD)")
         print("  Skipping superuser creation")
+        
+    # Verify by checking total users
+    print(f"\n  Total users in database: {User.objects.count()}")
+    
 except Exception as e:
     error_msg = str(e)
     print(f"⚠ Superuser creation warning: {error_msg}")
+    import traceback
     traceback.print_exc()
 
 # Start Daphne server

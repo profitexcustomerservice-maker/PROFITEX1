@@ -1,10 +1,23 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.contrib import messages
 from .models import User, SocialLink
 
+class CustomUserChangeForm(UserChangeForm):
+    class Meta:
+        model = User
+        fields = "__all__"
+
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+        fields = ("email",)
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    form = CustomUserChangeForm
+    add_form = CustomUserCreationForm
     list_display = ("email", "first_name", "last_name", "current_plan_level", "is_admin", "is_staff", "is_active")
     search_fields = ("email", "first_name", "last_name")
     list_filter = ("is_active", "is_staff", "is_admin", "current_plan_level")
@@ -19,7 +32,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
-            "fields": ("email", "password1", "password2", "first_name", "last_name", "is_staff", "is_active"),
+            "fields": ("email", "password1", "password2", "is_staff", "is_admin", "is_superuser", "is_active"),
         }),
     )
     filter_horizontal = ("groups", "user_permissions")
