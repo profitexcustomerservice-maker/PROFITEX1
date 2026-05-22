@@ -442,3 +442,85 @@ def admin_diagnostic(request):
             "message": str(e),
             "error_type": type(e).__name__
         }, status=500)
+
+
+# Authentication test endpoint
+def auth_test(request):
+    """Test authentication directly."""
+    from django.http import JsonResponse
+    from django.contrib.auth import authenticate
+    import traceback
+    
+    if request.method != 'POST':
+        return JsonResponse({"error": "POST required"}, status=400)
+    
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '').strip()
+    
+    logger.info(f"AUTH TEST: Attempting authentication for {email}")
+    
+    if not email or not password:
+        return JsonResponse({"error": "email and password required"}, status=400)
+    
+    try:
+        # Step 1: Check if user exists
+        user = User.objects.filter(email=email).first()
+        user_exists = user is not None
+        
+        step1_result = {
+            "step": "User lookup",
+            "user_exists": user_exists,
+            "email": email
+        }
+        
+        if user:
+            step1_result.update({
+                "user_id": user.id,
+                "is_active": user.is_active,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
+                "is_admin": user.is_admin
+            })
+        
+        # Step 2: Try authenticate
+        auth_user = authenticate(request, username=email, password=password)
+        
+        step2_result = {
+            "step": "Django authenticate()",
+            "authenticated": auth_user is not None,
+        }
+        
+        if auth_user:
+            step2_result.update({
+                "auth_user_id": auth_user.id,
+                "auth_user_email": auth_user.email,
+            })
+        
+        # Step 3: Test password directly
+        password_matches = False
+        if user:
+            password_matches = user.check_password(password)
+        
+        step3_result = {
+            "step": "Password check",
+            "password_matches": password_matches
+        }
+        
+        return JsonResponse({
+            "status": "ok",
+            "steps": [step1_result, step2_result, step3_result],
+            "summary": {
+                "user_found": user_exists,
+                "password_correct": password_matches,
+                "authentication_succeeded": auth_user is not None
+            }
+        })
+        
+    except Exception as e:
+        logger.exception(f"Auth test error: {str(e)}")
+        return JsonResponse({
+            "status": "error",
+            "message": str(e),
+            "error_type": type(e).__name__,
+            "traceback": traceback.format_exc()
+        }, status=500)

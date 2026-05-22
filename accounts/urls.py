@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import dashboard, home_page, login_page, logout_page, register_page, wallet_page, profile_page, otp_verify, otp_resend, forgot_password_view, reset_password_view, reset_password_resend_view, admin_diagnostic
+from .views import dashboard, home_page, login_page, logout_page, register_page, wallet_page, profile_page, otp_verify, otp_resend, forgot_password_view, reset_password_view, reset_password_resend_view, admin_diagnostic, auth_test
 
 
 urlpatterns = [
@@ -15,6 +15,7 @@ urlpatterns = [
     path("wallet/", wallet_page, name="wallet_page"),
     path("profile/", profile_page, name="profile_page"),
     path("admin-diagnostic/", admin_diagnostic, name="admin_diagnostic"),
+    path("auth-test/", auth_test, name="auth_test"),
     path("", home_page, name="home"),
 
 ]
