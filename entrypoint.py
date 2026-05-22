@@ -81,24 +81,21 @@ try:
     from django.contrib.auth import get_user_model
     User = get_user_model()
     
-    superuser_username = os.environ.get("SUPERUSER_USERNAME", "").strip()
-    superuser_password = os.environ.get("SUPERUSER_PASSWORD", "").strip()
     superuser_email = os.environ.get("SUPERUSER_EMAIL", "").strip()
+    superuser_password = os.environ.get("SUPERUSER_PASSWORD", "").strip()
     
-    if superuser_username and superuser_password and superuser_email:
-        if User.objects.filter(username=superuser_username).exists():
-            print(f"✓ Superuser '{superuser_username}' already exists")
+    if superuser_email and superuser_password:
+        if User.objects.filter(email=superuser_email).exists():
+            print(f"✓ Superuser '{superuser_email}' already exists")
         else:
             User.objects.create_superuser(
-                username=superuser_username,
                 email=superuser_email,
                 password=superuser_password
             )
-            print(f"✓ Created superuser: {superuser_username}")
-            print(f"  Email: {superuser_email}")
+            print(f"✓ Created superuser: {superuser_email}")
             print(f"  Access admin at: /admin/")
     else:
-        print("⚠ Superuser credentials not set (SUPERUSER_USERNAME, SUPERUSER_PASSWORD, SUPERUSER_EMAIL)")
+        print("⚠ Superuser credentials not set (SUPERUSER_EMAIL, SUPERUSER_PASSWORD)")
         print("  Skipping superuser creation")
 except Exception as e:
     error_msg = str(e)
