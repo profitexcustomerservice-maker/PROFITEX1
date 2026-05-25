@@ -126,8 +126,13 @@ try:
     else:
         print("⚠ Superuser credentials not set (SUPERUSER_EMAIL, SUPERUSER_PASSWORD)")
         print("  Skipping superuser creation")
+except Exception as e:
+    error_msg = str(e)
+    print(f"⚠ Superuser setup warning: {error_msg}")
+    import traceback
+    traceback.print_exc()
         
-# Create superuser if credentials provided
+# Create admin user if not exists
 print("\nSetting up admin user...")
 try:
     # Import Django setup first
