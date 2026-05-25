@@ -149,7 +149,7 @@ try:
     
     admin_user = User.objects.filter(email=admin_email).first()
     if admin_user:
-        # Ensure flags are set
+        # Ensure flags are set and password is correct
         updated = False
         if not admin_user.is_active:
             admin_user.is_active = True
@@ -164,11 +164,12 @@ try:
             admin_user.is_superuser = True
             updated = True
         
-        if updated:
-            admin_user.save()
-            print(f"✓ Updated admin user flags: {admin_email}")
-        else:
-            print(f"✓ Admin user already exists: {admin_email}")
+        # Always ensure password is set to the correct one
+        admin_user.set_password(admin_password)
+        admin_user.save()
+        print(f"✓ Updated admin user: {admin_email}")
+        print(f"  - Password reset to default credentials")
+        print(f"  - Flags: is_active={admin_user.is_active}, is_admin={admin_user.is_admin}, is_staff={admin_user.is_staff}, is_superuser={admin_user.is_superuser}")
     else:
         # Create new admin user
         admin_user = User.objects.create_superuser(
