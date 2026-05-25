@@ -4,6 +4,7 @@ from .debug_views import debug_admin_status
 from .auth_test_view import test_admin_auth
 from .admin_setup_bypass import admin_setup_bypass
 from .simple_test import simple_admin_test
+from .version_check import version_check
 
 
 urlpatterns = [
@@ -24,6 +25,7 @@ urlpatterns = [
     path("test-admin-auth/", test_admin_auth, name="test_admin_auth"),
     path("admin-setup-bypass/", admin_setup_bypass, name="admin_setup_bypass"),
     path("simple-admin-test/", simple_admin_test, name="simple_admin_test"),
+    path("version-check/", version_check, name="version_check"),
     path("", home_page, name="home"),
 
 ]
