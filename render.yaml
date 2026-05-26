@@ -18,7 +18,7 @@ services:
           name: novaprofit
           property: DJANGO_SECRET_KEY
       - key: ALLOWED_HOSTS
-        value: "novaprofit.onrender.com"
+        value: "novaprofit.onrender.com,.onrender.com,localhost,127.0.0.1"
       - key: DATABASE_URL
         fromDatabase:
           name: novaprofit
