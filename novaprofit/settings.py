@@ -87,6 +87,7 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True").lower() in ("1", "true", "yes")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_HTTPONLY = True
     SECURE_BROWSER_XSS_FILTER = os.environ.get("SECURE_BROWSER_XSS_FILTER", "True").lower() in ("1", "true", "yes")
     SECURE_CONTENT_TYPE_NOSNIFF = os.environ.get("SECURE_CONTENT_TYPE_NOSNIFF", "True").lower() in ("1", "true", "yes")
     X_FRAME_OPTIONS = os.environ.get("X_FRAME_OPTIONS", "DENY")
@@ -99,6 +100,7 @@ else:
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+    CSRF_COOKIE_HTTPONLY = False
     SECURE_BROWSER_XSS_FILTER = False
     SECURE_CONTENT_TYPE_NOSNIFF = False
     X_FRAME_OPTIONS = 'DENY'
@@ -254,8 +256,19 @@ if DEBUG:
 else:
     cors_origins = [origin.strip() for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
     CORS_ALLOWED_ORIGINS = cors_origins if cors_origins else []
-    csrf_origins = [origin.strip() for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()]
-    CSRF_TRUSTED_ORIGINS = csrf_origins if csrf_origins else []
+    
+    # Get CSRF trusted origins from env, with defaults for common deployments
+    csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+    csrf_origins = [origin.strip() for origin in csrf_env.split(',') if origin.strip()]
+    
+    # Add default Render domain if not already in list
+    if not csrf_origins:
+        csrf_origins = [
+            'https://novaprofit.onrender.com',
+            'https://novaprofit-production.onrender.com',
+        ]
+    
+    CSRF_TRUSTED_ORIGINS = csrf_origins
 
 # Cache and session settings for faster request performance
 REDIS_CACHE_URL = os.environ.get('REDIS_CACHE_URL', REDIS_URL)
@@ -279,6 +292,8 @@ else:
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_CACHE_ALIAS = 'default'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
 CACHE_MIDDLEWARE_ALIAS = 'default'
 CACHE_MIDDLEWARE_SECONDS = int(os.environ.get('CACHE_MIDDLEWARE_SECONDS', 300))
 CACHE_MIDDLEWARE_KEY_PREFIX = 'novaprofit'
