@@ -28,7 +28,12 @@ SECRET_KEY = config("DJANGO_SECRET_KEY", default="replace-me")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
 # Configure ALLOWED_HOSTS based on environment
-if DEBUG:
+# First try to read from environment variable (for Render)
+_allowed_hosts_env = os.environ.get("ALLOWED_HOSTS", "").strip()
+if _allowed_hosts_env:
+    # Parse comma-separated list from environment
+    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_env.split(",") if host.strip()]
+elif DEBUG:
     ALLOWED_HOSTS = [
         'novaprofit.onrender.com',
         'localhost',
