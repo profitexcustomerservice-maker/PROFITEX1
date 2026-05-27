@@ -763,6 +763,13 @@
                     </svg>
                     <span>Analytics</span>
                 </a>
+                <a href="/admin_panel/social-links/" class="nav-item">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13.823 17.412c-.123-.075-.045-.325.076-.389l2.457-1.389c.123-.075.283.018.31.123l.69 3.043c.027.125-.114.23-.217.161l-2.93-1.681zm-5.646-4.855c-.123-.075-.045-.325.076-.389l2.457-1.389c.123-.075.283.018.31.123l.69 3.043c.027.125-.114.23-.217.161l-2.93-1.681z"/>
+                        <path d="M21 12a9 9 0 00-9-9c-1.17.098-2.268.34-3.276.696l-.63-.39c-.442-.276-.99-.418-1.568-.418H4a2 2 0 00-2 2v2c0 .578.142 1.126.418 1.568l.39.63C3.98 8.39 4 8.69 4 9a9 9 0 006.2 8.7 1 1 0 001.2-1.5l-.69-3.04c-.06-.25-.34-.37-.53-.22l-2.4 1.5a1 1 0 00-.17 1.7l2.7 2.7c.13.13.34.16.5.08a11 11 0 002.93-1.77l2.93-1.68a1 1 0 00.03-.17A9.02 9.02 0 0015 12a3 3 0 01-3-3 9.03 9.03 0 00-1.47-.42l-.81-1.58A8.06 8.06 0 0112 3a8 8 0 018 8v3.71c0 .21-.12.4-.31.46l-2.45 1.39c-.12.07-.28-.02-.31-.12l-.69-3.04c-.03-.12.05-.24.16-.29l1.63-.7a1 1 0 00-.56-1.88A9.06 9.06 0 0012 21a8.96 8.96 0 01-.82-17.41z"/>
+                    </svg>
+                    <span>Social Links</span>
+                </a>
                 <a href="/admin_panel/settings/" class="nav-item">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
@@ -867,6 +874,19 @@
                 'X-CSRFToken': getCookie('csrftoken'),
                 ...options.headers
             };
+            
+            // Add JWT token if available (from main TokenManager or local storage)
+            let accessToken = null;
+            if (typeof TokenManager !== 'undefined' && TokenManager.getAccessToken) {
+                accessToken = TokenManager.getAccessToken();
+            } else {
+                accessToken = localStorage.getItem('jwt_access_token');
+            }
+            
+            if (accessToken && !headers['Authorization']) {
+                headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+            
             const response = await fetch(url, {
                 credentials: 'same-origin',
                 ...options,

@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from accounts.views import RegisterView, CurrentUserView, UserListView, UserDetailView, ToggleUserStatusView
+from accounts.views import RegisterView, CurrentUserView, UserListView, UserDetailView, ToggleUserStatusView, GetJWTTokenView, SocialLinkViewSet
 from core.views import TaskViewSet, PlanViewSet, UserPlanViewSet, UserTaskViewSet, system_settings_api, health_check
 from wallet.views import TransactionViewSet, WithdrawalViewSet, PaymentMethodViewSet, CryptoDepositViewSet
 from notifications.views import NotificationViewSet
@@ -19,6 +19,7 @@ router.register(r"withdrawals", WithdrawalViewSet, basename="withdrawal")
 router.register(r"payment-methods", PaymentMethodViewSet, basename="payment-method")
 router.register(r"crypto-deposits", CryptoDepositViewSet, basename="crypto-deposit")
 router.register(r"notifications", NotificationViewSet, basename="notification")
+router.register(r"social-links", SocialLinkViewSet, basename="social-link")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -26,6 +27,7 @@ urlpatterns = [
     path("api/auth/register/", RegisterView.as_view(), name="auth_register"),
     path("api/auth/login/", TokenObtainPairView.as_view(), name="auth_login"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/jwt/", GetJWTTokenView.as_view(), name="auth_jwt"),
     path("api/auth/me/", CurrentUserView.as_view(), name="auth_me"),
     path("api/user/", CurrentUserView.as_view(), name="user_me"),
     path("api/auth/users/", UserListView.as_view(), name="auth_users"),

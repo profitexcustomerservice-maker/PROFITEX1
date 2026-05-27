@@ -6,6 +6,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from .serializers import RegisterSerializer, UserSerializer
 from .otp_utils import create_and_send_otp, verify_otp
@@ -52,6 +53,32 @@ class ToggleUserStatusView(APIView):
         user.is_active = not user.is_active
         user.save()
         return Response({"is_active": user.is_active})
+
+class GetJWTTokenView(APIView):
+    """Generate JWT tokens for currently authenticated user (via session)"""
+    permission_classes = (permissions.IsAuthenticated,)
+    
+    def post(self, request):
+        """Generate fresh JWT tokens for the authenticated user"""
+        user = request.user
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_id': user.id,
+            'email': user.email,
+        })
+    
+    def get(self, request):
+        """GET endpoint to retrieve JWT tokens"""
+        user = request.user
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user_id': user.id,
+            'email': user.email,
+        })
 
 # --- Template Views ---
 
@@ -525,3 +552,23 @@ def auth_test(request):
             "error_type": type(e).__name__,
             "traceback": traceback.format_exc()
         }, status=500)
+
+
+# --- Social Link API ViewSet ---
+from rest_framework import viewsets
+from .models import SocialLink
+from .serializers import SocialLinkSerializer
+
+class SocialLinkViewSet(viewsets.ModelViewSet):
+    """API endpoint for managing social links"""
+    queryset = SocialLink.objects.all().order_by('order', 'name')
+    serializer_class = SocialLinkSerializer
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+
+    def get_permissions(self):
+        """Allow anyone to list/retrieve, but only admins can create/update/delete"""
+        if self.action in ['list', 'retrieve']:
+            permission_classes = (permissions.AllowAny,)
+        else:
+            permission_classes = (IsAdminUserCustom,)
+        return [permission() for permission in permission_classes]

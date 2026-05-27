@@ -653,7 +653,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadCompleted() {
-        fetch('/api/user-tasks/?limit=20', { credentials: 'same-origin' })
+        apiFetch('/api/user-tasks/?limit=20')
             .then(response => response.json())
             .then(data => {
                 if (data.results && data.results.length > 0) {
@@ -703,7 +703,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadTasks() {
-        fetch('/api/tasks/?limit=20', { credentials: 'same-origin' })
+        apiFetch('/api/tasks/?limit=20')
             .then(response => response.json())
             .then(data => {
                 if (data.results && data.results.length > 0) {

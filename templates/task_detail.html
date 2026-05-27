@@ -190,7 +190,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadTaskDetail() {
-    fetch(`/api/tasks/${taskId}/`, { credentials: 'same-origin' })
+    apiFetch(`/api/tasks/${taskId}/`)
         .then(handleJsonResponse)
         .then(data => {
             currentTask = data;

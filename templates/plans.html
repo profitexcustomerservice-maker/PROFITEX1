@@ -484,7 +484,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let hasActivePlan = false;
 
     function loadSubscriptions() {
-        return fetch('/api/user-plans/?limit=20', { credentials: 'same-origin' })
+        return apiFetch('/api/user-plans/?limit=20')
             .then(response => response.json())
             .then(data => {
                 hasActivePlan = Array.isArray(data.results) && data.results.length > 0;
@@ -532,7 +532,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function loadPlans() {
         const walletBalance = window.currentWalletBalance || 0;
-        fetch('/api/plans/?limit=20', { credentials: 'same-origin' })
+        apiFetch('/api/plans/?limit=20')
             .then(response => response.json())
             .then(data => {
                 if (data.results && data.results.length > 0) {

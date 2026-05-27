@@ -8,25 +8,95 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script>
+        // ===== TOKEN MANAGEMENT =====
+        const TokenManager = {
+            ACCESS_TOKEN_KEY: 'jwt_access_token',
+            REFRESH_TOKEN_KEY: 'jwt_refresh_token',
+            
+            getAccessToken() {
+                return localStorage.getItem(this.ACCESS_TOKEN_KEY);
+            },
+            
+            getRefreshToken() {
+                return localStorage.getItem(this.REFRESH_TOKEN_KEY);
+            },
+            
+            setTokens(access, refresh) {
+                if (access) localStorage.setItem(this.ACCESS_TOKEN_KEY, access);
+                if (refresh) localStorage.setItem(this.REFRESH_TOKEN_KEY, refresh);
+            },
+            
+            clearTokens() {
+                localStorage.removeItem(this.ACCESS_TOKEN_KEY);
+                localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+            },
+            
+            isAuthenticated() {
+                return !!this.getAccessToken();
+            }
+        };
+        
+        // ===== COOKIE UTILITIES =====
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
             if (parts.length === 2) return parts.pop().split(';').shift();
         }
+        
+        // ===== API FETCH FUNCTION =====
         function apiFetch(path, opts = {}) {
             const csrftoken = getCookie('csrftoken');
             const headers = opts.headers || {};
+            
+            // Always set Accept header
             headers['Accept'] = 'application/json';
+            
+            // Add JWT token if available and not already in headers
+            const accessToken = TokenManager.getAccessToken();
+            if (accessToken && !headers['Authorization']) {
+                headers['Authorization'] = `Bearer ${accessToken}`;
+            }
+            
+            // For non-GET requests, add CSRF token and content type
             if (!opts.method || opts.method.toUpperCase() !== 'GET') {
                 headers['X-CSRFToken'] = csrftoken;
-                headers['Content-Type'] = 'application/json';
+                if (!headers['Content-Type']) {
+                    headers['Content-Type'] = 'application/json';
+                }
             }
+            
             return fetch(path, { credentials: 'same-origin', ...opts, headers });
         }
+        
         function handleJsonResponse(response) {
             if (!response.ok) throw response;
             return response.json();
         }
+        
+        // ===== AUTHENTICATION CHECK =====
+        function isUserAuthenticated() {
+            // Check if user has JWT token OR if the page was rendered for an authenticated user
+            return TokenManager.isAuthenticated() || document.body.classList.contains('authenticated');
+        }
+        
+        // Mark body as authenticated if user has valid session/JWT
+        // This is used to conditionally load authenticated content
+        window.addEventListener('load', () => {
+            if (TokenManager.isAuthenticated()) {
+                document.body.classList.add('authenticated');
+            } else {
+                // Try to fetch JWT tokens from the server for authenticated sessions
+                fetch('/api/auth/jwt/', { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.access && data.refresh) {
+                            TokenManager.setTokens(data.access, data.refresh);
+                            document.body.classList.add('authenticated');
+                        }
+                    })
+                    .catch(() => {}); // User not authenticated
+            }
+        });
     </script>
 
     <style>
@@ -1187,7 +1257,7 @@
                     {% for link in social_links %}
                         <a href="{{ link.url }}" class="social-link" target="_blank" rel="noopener noreferrer" title="{{ link.name }}">
                             {% if link.icon %}
-                                <i class="{{ link.icon }}"></i>
+                                <i class="fab {{ link.icon }}"></i>
                             {% else %}
                                 <i class="fas fa-link"></i>
                             {% endif %}
@@ -1301,36 +1371,71 @@ document.addEventListener('click', (e) => {
 });
 
 // Load user data
-function loadUserData() {
-    return fetch('/api/auth/me/', { credentials: 'same-origin' })
-        .then(handleJsonResponse)
-        .then(data => {
-            const balance = Number(data.wallet_balance) || 0;
-            window.currentWalletBalance = balance;
-            document.getElementById('header-balance').textContent = `$${balance.toFixed(2)}`;
-            return data;
+function ensureJWTTokens() {
+    // If tokens already exist, return resolved promise
+    if (TokenManager.getAccessToken()) {
+        return Promise.resolve();
+    }
+    
+    // Otherwise, fetch tokens from the JWT endpoint
+    return fetch('/api/auth/jwt/', { credentials: 'same-origin' })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to get JWT tokens');
+            return response.json();
         })
-        .catch(() => {
-            window.currentWalletBalance = 0;
-            return {};
+        .then(data => {
+            TokenManager.setTokens(data.access, data.refresh);
+        })
+        .catch(err => {
+            console.error('Failed to retrieve JWT tokens:', err);
+            // Tokens not available - user may not be logged in
         });
+}
+
+function loadUserData() {
+    // First ensure JWT tokens are available
+    return ensureJWTTokens().then(() => {
+        return apiFetch('/api/auth/me/')
+            .then(handleJsonResponse)
+            .then(data => {
+                const balance = Number(data.wallet_balance) || 0;
+                window.currentWalletBalance = balance;
+                const balanceElement = document.getElementById('header-balance');
+                if (balanceElement) {
+                    balanceElement.textContent = `$${balance.toFixed(2)}`;
+                }
+                return data;
+            })
+            .catch(err => {
+                console.error('Failed to load user data:', err);
+                window.currentWalletBalance = 0;
+                return {};
+            });
+    });
 }
 
 // Load notification count
 function loadNotificationCount() {
-    fetch('/api/notifications/', { credentials: 'same-origin' })
-        .then(handleJsonResponse)
-        .then(data => {
-            const unreadCount = data.results ? data.results.filter(n => !n.is_read).length : 0;
-            const badge = document.getElementById('notification-count');
-            if (unreadCount > 0) {
-                badge.textContent = unreadCount;
-                badge.style.display = 'flex';
-            } else {
-                badge.style.display = 'none';
-            }
-        })
-        .catch(() => {});
+    // First ensure JWT tokens are available
+    return ensureJWTTokens().then(() => {
+        return apiFetch('/api/notifications/')
+            .then(handleJsonResponse)
+            .then(data => {
+                const unreadCount = data.results ? data.results.filter(n => !n.is_read).length : 0;
+                const badge = document.getElementById('notification-count');
+                if (badge) {
+                    if (unreadCount > 0) {
+                        badge.textContent = unreadCount;
+                        badge.style.display = 'flex';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Failed to load notifications:', err);
+            });
+    });
 }
 
 // Set active nav link
@@ -1347,9 +1452,14 @@ function setActiveNavLink() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    loadUserData();
-    loadNotificationCount();
     setActiveNavLink();
+    
+    // Only load authenticated user data if a session exists
+    // The functions will handle JWT token retrieval
+    if (document.body.classList.contains('authenticated') || TokenManager.isAuthenticated()) {
+        loadUserData();
+        loadNotificationCount();
+    }
 });
 
 // Global Toast Notification System

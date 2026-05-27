@@ -64,12 +64,12 @@ def send_otp_email(user, otp):
             # attach HTML alternative
             email.attach_alternative(html_message, "text/html")
             email.send(fail_silently=False)
-            print(f"✓ EMAIL SENT SUCCESSFULLY to {recipient_email} (attempt {attempt})")
+            print(f"[OK] EMAIL SENT SUCCESSFULLY to {recipient_email} (attempt {attempt})")
             return True
         except Exception as exc:
             error_type = type(exc).__name__
             error_msg = str(exc)
-            print(f"✗ EMAIL ERROR on attempt {attempt}/{max_attempts}")
+            print(f"[ERROR] EMAIL ERROR on attempt {attempt}/{max_attempts}")
             print(f"  Type: {error_type}")
             print(f"  Message: {error_msg}")
             print(f"  Recipient: {recipient_email}")
@@ -81,7 +81,7 @@ def send_otp_email(user, otp):
                     print(f"    {line}")
             
             if attempt == max_attempts:
-                print(f"✗ EMAIL FAILED after {max_attempts} attempts!")
+                print(f"[ERROR] EMAIL FAILED after {max_attempts} attempts!")
                 return False
             
             print(f"  Retrying in {backoff_seconds} seconds...")
@@ -100,7 +100,8 @@ def queue_send_otp_email(user, otp):
         return True
     except Exception as exc:
         print(f"Failed to queue OTP email, sending synchronously: {exc}")
-        return send_otp_email(user, otp)
+    # Always try direct send as final fallback (works with console backend)
+    return send_otp_email(user, otp)
 
 
 def create_and_send_otp(user):

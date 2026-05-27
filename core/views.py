@@ -223,7 +223,12 @@ def plans_page(request):
 def system_settings_api(request):
     """API endpoint to fetch system-wide settings"""
     try:
+        from accounts.models import SocialLink
         settings = SystemSettings.get_settings()
+        social_links = [
+            {"name": link.name, "url": link.url, "icon": link.icon}
+            for link in SocialLink.objects.filter(is_active=True).order_by('order', 'name')
+        ]
         return JsonResponse({
             "success": True,
             "telegram_link": settings.telegram_link,
@@ -232,6 +237,7 @@ def system_settings_api(request):
             "support_email": settings.support_email,
             "facebook_link": settings.facebook_link,
             "instagram_link": settings.instagram_link,
+            "social_links": social_links,
             "announcement_banner": settings.announcement_banner,
             "updated_at": settings.updated_at.isoformat() if settings.updated_at else None
         })

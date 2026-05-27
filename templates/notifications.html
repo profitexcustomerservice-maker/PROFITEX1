@@ -662,7 +662,7 @@ function markAllAsRead() {
     const btn = document.getElementById('mark-read-btn');
     btn.disabled = true;
     
-    fetch('/api/notifications/', { credentials: 'same-origin' })
+    apiFetch('/api/notifications/')
         .then(response => response.json())
         .then(data => {
             const unreadNotifications = data.results.filter(n => !n.is_read);
@@ -726,7 +726,7 @@ function startAutoRefresh() {
     indicator.classList.add('active');
     
     refreshInterval = setInterval(() => {
-        fetch('/api/notifications/?limit=1', { credentials: 'same-origin' })
+        apiFetch('/api/notifications/?limit=1')
             .then(response => response.json())
             .then(data => {
                 // Check if there are new unread notifications

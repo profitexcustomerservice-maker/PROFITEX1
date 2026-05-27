@@ -1,0 +1,96 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{% if social_link %}Edit{% else %}Add{% endif %} Social Link</h1>
+    <p class="page-subtitle">Configure social media links (Telegram, LinkedIn, Facebook, etc.)</p>
+</div>
+
+<!-- FontAwesome CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcYeRITg7Yt2HAKs8QqicoF5B1D1x6+Jo3wJlP8W4DjYjO2JNPx+X6L5G5P5Q5J5K5L5M5A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<div class="card">
+    <form method="post" style="max-width: 600px;" id="social-link-form">
+        {% csrf_token %}
+        {% if error %}
+        <div class="alert alert-error" style="padding: 12px; background: #fee; border: 1px solid #fcc; border-radius: 6px; margin-bottom: 20px; color: #c33;">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Platform Name</label>
+            <input type="text" 
+                   name="name" 
+                   value="{% if social_link %}{{ social_link.name }}{% endif %}" 
+                   placeholder="e.g., Telegram, LinkedIn, Facebook"
+                   required 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">URL</label>
+            <input type="url" 
+                   name="url" 
+                   value="{% if social_link %}{{ social_link.url }}{% endif %}" 
+                   placeholder="https://t.me/yourchannel or https://linkedin.com/in/yourprofile"
+                   required 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">FontAwesome Icon Class (optional)</label>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <input type="text" 
+                       name="icon" 
+                       id="icon-input"
+                       value="{% if social_link %}{{ social_link.icon }}{% endif %}" 
+                       placeholder="fa-telegram, fa-linkedin, fa-facebook, fa-twitter"
+                       style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                <div id="icon-preview" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #6366f1;">
+                    <i class="{% if social_link %}{{ social_link.icon }}{% else %}fa-solid fa-link{% endif %}"></i>
+                </div>
+            </div>
+            <p style="margin-top: 8px; color: #666; font-size: 0.9rem;">
+                Common icons: <code>fa-telegram</code>, <code>fa-linkedin</code>, <code>fa-facebook</code>, <code>fa-twitter</code>, <code>fa-whatsapp</code>, <code>fa-instagram</code>, <code>fa-youtube</code>
+            </p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Display Order</label>
+            <input type="number" 
+                   name="order" 
+                   value="{% if social_link %}{{ social_link.order }}{% else %}0{% endif %}"
+                   min="0"
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            <p style="margin-top: 8px; color: #666; font-size: 0.9rem;">Lower numbers appear first. Use 1, 2, 3 for ordering.</p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                <input type="checkbox" 
+                       name="is_active" 
+                       {% if social_link and social_link.is_active %}checked{% elif not social_link %}checked{% endif %}>
+                Active
+            </label>
+            <p style="margin-top: 8px; color: #666; font-size: 0.9rem;">If unchecked, the link will not be displayed to users.</p>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="primary" style="flex: 1;">
+                {% if social_link %}Update{% else %}Create{% endif %} Link
+            </button>
+            <a href="{% url 'admin_social_links' %}" style="flex: 1; text-align: center; padding: 12px; background: #f5f5f5; color: #333; border: 1px solid #ddd; border-radius: 6px; text-decoration: none;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('icon-input').addEventListener('input', function(e) {
+    const iconClass = e.target.value || 'fa-link';
+    const preview = document.getElementById('icon-preview');
+    preview.innerHTML = '<i class="fa-solid ' + iconClass + '"></i>';
+});
+</script>
+{% endblock %}

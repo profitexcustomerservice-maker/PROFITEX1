@@ -622,4 +622,92 @@ def payment_method_toggle(request, pk):
     return redirect('admin_payment_methods')
 
 
+@login_required
+@user_passes_test(is_admin, login_url='/admin_panel/login/')
+def admin_social_links(request):
+    """View to manage social links in admin panel"""
+    from accounts.models import SocialLink
+    social_links = SocialLink.objects.all().order_by('order', 'name')
+    return render(request, 'admin/social_links.html', {'social_links': social_links})
+
+
+@login_required
+@user_passes_test(is_admin, login_url='/admin_panel/login/')
+def admin_social_link_create(request):
+    """Create a new social link"""
+    from accounts.models import SocialLink
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        url = request.POST.get('url', '').strip()
+        icon = request.POST.get('icon', '').strip()
+        is_active = request.POST.get('is_active', 'on') == 'on'
+        order = int(request.POST.get('order', 0) or 0)
+        try:
+            SocialLink.objects.create(
+                name=name,
+                url=url,
+                icon=icon,
+                is_active=is_active,
+                order=order
+            )
+            return redirect('admin_social_links')
+        except Exception as e:
+            logger.error(f"Error creating social link: {str(e)}")
+            return render(request, 'admin/social_link_form.html', {
+                'error': str(e),
+                'name': name,
+                'url': url,
+                'icon': icon,
+                'is_active': is_active,
+                'order': order
+            })
+    return render(request, 'admin/social_link_form.html')
+
+
+@login_required
+@user_passes_test(is_admin, login_url='/admin_panel/login/')
+def admin_social_link_update(request, pk):
+    """Update an existing social link"""
+    from accounts.models import SocialLink
+    social_link = get_object_or_404(SocialLink, pk=pk)
+    if request.method == 'POST':
+        social_link.name = request.POST.get('name', '').strip()
+        social_link.url = request.POST.get('url', '').strip()
+        social_link.icon = request.POST.get('icon', '').strip()
+        social_link.is_active = request.POST.get('is_active', 'on') == 'on'
+        social_link.order = int(request.POST.get('order', 0) or 0)
+        try:
+            social_link.save()
+            return redirect('admin_social_links')
+        except Exception as e:
+            logger.error(f"Error updating social link: {str(e)}")
+            return render(request, 'admin/social_link_form.html', {
+                'social_link': social_link,
+                'error': str(e)
+            })
+    return render(request, 'admin/social_link_form.html', {'social_link': social_link})
+
+
+@login_required
+@user_passes_test(is_admin, login_url='/admin_panel/login/')
+def admin_social_link_delete(request, pk):
+    """Delete a social link"""
+    from accounts.models import SocialLink
+    social_link = get_object_or_404(SocialLink, pk=pk)
+    if request.method == 'POST':
+        social_link.delete()
+    return redirect('admin_social_links')
+
+
+@login_required
+@user_passes_test(is_admin, login_url='/admin_panel/login/')
+def admin_social_link_toggle(request, pk):
+    """Toggle active status of a social link"""
+    from accounts.models import SocialLink
+    social_link = get_object_or_404(SocialLink, pk=pk)
+    social_link.is_active = not social_link.is_active
+    social_link.save()
+    return redirect('admin_social_links')
+
+
 # API endpoints for admin actions have been replaced with standard DRF routes.

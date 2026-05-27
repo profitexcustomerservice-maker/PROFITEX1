@@ -27,12 +27,18 @@ def _is_placeholder(value):
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="replace-me")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
+# Print debug info for startup
+print(f"[STARTUP] DEBUG={DEBUG}, ALLOWED_HOSTS_ENV={os.environ.get('ALLOWED_HOSTS', '')}")
+
 # Configure ALLOWED_HOSTS based on environment
 # First try to read from environment variable (for Render)
 _allowed_hosts_env = os.environ.get("ALLOWED_HOSTS", "").strip()
 if _allowed_hosts_env:
     # Parse comma-separated list from environment
     ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_env.split(",") if host.strip()]
+    # Always add testserver for development testing
+    if DEBUG and 'testserver' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('testserver')
 elif DEBUG:
     ALLOWED_HOSTS = [
         'novaprofit.onrender.com',
@@ -256,11 +262,44 @@ CELERY_BEAT_SCHEDULE = {
 # CORS settings
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
+    CORS_ALLOW_HEADERS = [
+        'accept',
+        'accept-encoding',
+        'authorization',
+        'content-type',
+        'dnt',
+        'origin',
+        'user-agent',
+        'x-csrftoken',
+        'x-requested-with',
+    ]
+    CORS_EXPOSE_HEADERS = [
+        'access-control-allow-origin',
+        'content-type',
+    ]
     # Add localhost to CSRF_TRUSTED_ORIGINS for development
     CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
 else:
+    # Production CORS settings
     cors_origins = [origin.strip() for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()]
     CORS_ALLOWED_ORIGINS = cors_origins if cors_origins else []
+    CORS_ALLOW_CREDENTIALS = True
+    CORS_ALLOW_HEADERS = [
+        'accept',
+        'accept-encoding',
+        'authorization',
+        'content-type',
+        'dnt',
+        'origin',
+        'user-agent',
+        'x-csrftoken',
+        'x-requested-with',
+    ]
+    CORS_EXPOSE_HEADERS = [
+        'access-control-allow-origin',
+        'content-type',
+    ]
     
     # Get CSRF trusted origins from env, with defaults for common deployments
     csrf_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
@@ -326,6 +365,10 @@ if not EMAIL_HOST_PASSWORD:
         # In production, warn but continue
         import warnings
         warnings.warn('EMAIL_HOST_PASSWORD not set! Emails will be sent to console.')
+elif DEBUG:
+    # In DEBUG mode, use SMTP if credentials are provided and EMAIL_FORCE_CONSOLE is not set
+    if os.environ.get('EMAIL_FORCE_CONSOLE', 'false').lower() in ('1', 'true', 'yes'):
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # SendGrid configuration (recommended for production)
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')

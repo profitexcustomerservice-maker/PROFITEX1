@@ -29,6 +29,11 @@ from .views import (
     payment_method_update,
     payment_method_delete,
     payment_method_toggle,
+    admin_social_links,
+    admin_social_link_create,
+    admin_social_link_update,
+    admin_social_link_delete,
+    admin_social_link_toggle,
 )
 
 urlpatterns = [
@@ -51,6 +56,12 @@ urlpatterns = [
     path('transactions/', admin_transactions, name='admin_transactions'),
     path('analytics/', admin_analytics, name='admin_analytics'),
     path('settings/', admin_settings, name='admin_settings'),
+    # Social Links Management
+    path('social-links/', admin_social_links, name='admin_social_links'),
+    path('social-links/create/', admin_social_link_create, name='admin_social_link_create'),
+    path('social-links/<int:pk>/edit/', admin_social_link_update, name='admin_social_link_update'),
+    path('social-links/<int:pk>/delete/', admin_social_link_delete, name='admin_social_link_delete'),
+    path('social-links/<int:pk>/toggle/', admin_social_link_toggle, name='admin_social_link_toggle'),
     # API endpoints for user management
     path('api/users/', api_users_list, name='api_users_list'),
     path('api/users/<int:user_id>/', api_user_detail, name='api_user_detail'),

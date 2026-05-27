@@ -1304,7 +1304,7 @@ async function loadSystemSettings() {
 // Update dashboard data in real-time
 function updateDashboardData() {
     // Update wallet balance
-    fetch('/api/user/', { credentials: 'same-origin' })
+    apiFetch('/api/user/')
         .then(response => response.json())
         .then(data => {
             if (data.wallet_balance !== undefined) {
@@ -1326,7 +1326,7 @@ function updateDashboardData() {
         .catch(error => console.error('Error updating dashboard:', error));
 
     // Update recent transactions
-    fetch('/api/transactions/?limit=5', { credentials: 'same-origin' })
+    apiFetch('/api/transactions/?limit=5')
         .then(response => response.json())
         .then(data => {
             if (data.results && data.results.length > 0) {
