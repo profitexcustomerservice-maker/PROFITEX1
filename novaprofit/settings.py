@@ -357,16 +357,18 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 # Use email from environment or fallback
 DEFAULT_FROM_EMAIL = f"Profitx Support <{EMAIL_HOST_USER}>"
 
-# If no password set, use console backend for debugging
-if not EMAIL_HOST_PASSWORD:
-    if DEBUG:
-        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    else:
-        # In production, warn but continue
+# Check if we should force console backend (development or when SMTP unavailable)
+FORCE_CONSOLE_EMAIL = os.environ.get('EMAIL_FORCE_CONSOLE', 'false').lower() in ('1', 'true', 'yes')
+
+# Determine email backend
+if FORCE_CONSOLE_EMAIL or not EMAIL_HOST_PASSWORD:
+    # Use console backend if explicitly forced or no password provided
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    if not DEBUG:
         import warnings
-        warnings.warn('EMAIL_HOST_PASSWORD not set! Emails will be sent to console.')
+        warnings.warn('Using console email backend. OTP codes will be printed to logs.')
 elif DEBUG:
-    # In DEBUG mode, use SMTP if credentials are provided and EMAIL_FORCE_CONSOLE is not set
+    # In DEBUG mode with password, still allow override
     if os.environ.get('EMAIL_FORCE_CONSOLE', 'false').lower() in ('1', 'true', 'yes'):
         EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
