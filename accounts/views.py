@@ -90,27 +90,32 @@ def home_page(request):
 
 @login_required
 def dashboard(request):
-    """User dashboard view"""
-    # Get user wallet balance
-    from wallet.models import Wallet
-    wallet, _ = Wallet.objects.get_or_create(user=request.user)
+    """User dashboard view with query optimization"""
+    from wallet.models import Wallet, Transaction
+    from core.models import UserPlan, UserTask
+    from notifications.models import Notification
+    from django.db.models import Prefetch
+    
+    # Get user wallet with single query
+    wallet, _ = Wallet.objects.select_related('user').get_or_create(user=request.user)
     balance = wallet.balance
     
-    # Get current plan
-    from core.models import UserPlan
+    # Get current plan - optimized query
     current_plan = UserPlan.objects.filter(user=request.user).first()
     
-    # Get completed tasks count
-    from core.models import UserTask
+    # Get completed tasks count - single database hit
     completed_tasks = UserTask.objects.filter(user=request.user).count()
     
-    # Get unread notifications
-    from notifications.models import Notification
-    unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
+    # Get unread notifications count - cached if possible
+    from django.core.cache import cache
+    cache_key = f'unread_notif_{request.user.id}'
+    unread_notifications = cache.get(cache_key)
+    if unread_notifications is None:
+        unread_notifications = Notification.objects.filter(user=request.user, is_read=False).count()
+        cache.set(cache_key, unread_notifications, 300)  # Cache for 5 minutes
     
-    # Get recent transactions
-    from wallet.models import Transaction
-    recent_transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')[:5]
+    # Get recent transactions - prefetch related objects
+    recent_transactions = Transaction.objects.filter(user=request.user).select_related('wallet').order_by('-created_at')[:5]
     
     context = {
         'balance': balance,

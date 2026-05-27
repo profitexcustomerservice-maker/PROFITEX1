@@ -1414,11 +1414,12 @@ function loadUserData() {
     });
 }
 
-// Load notification count
+// Load notification count - NON-BLOCKING version
 function loadNotificationCount() {
-    // First ensure JWT tokens are available
-    return ensureJWTTokens().then(() => {
-        return apiFetch('/api/notifications/')
+    // Ensure JWT tokens are available but don't block on it
+    ensureJWTTokens().then(() => {
+        // Load notifications asynchronously without blocking page render
+        apiFetch('/api/notifications/')
             .then(handleJsonResponse)
             .then(data => {
                 const unreadCount = data.results ? data.results.filter(n => !n.is_read).length : 0;
