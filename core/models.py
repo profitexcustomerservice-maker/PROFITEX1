@@ -135,6 +135,10 @@ class UserTask(models.Model):
     class Meta:
         unique_together = ("user", "task", "completed_date")
         ordering = ("-completed_at",)
+        indexes = [
+            models.Index(fields=['user', 'completed_date']),
+            models.Index(fields=['task', 'completed_date']),
+        ]
 
     def __str__(self):
         return f"{self.user.email} - {self.task.title}"
@@ -143,13 +147,39 @@ class UserPlan(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="plans")
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name="subscriptions")
     joined_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Plan expiration date")
+    is_active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         unique_together = ("user", "plan")
         ordering = ("-joined_at",)
+        indexes = [
+            models.Index(fields=['user', 'plan']),
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['user', 'expires_at']),
+        ]
 
     def __str__(self):
         return f"{self.user.email} -> {self.plan.title}"
+    
+    def is_expired(self):
+        """Check if the plan subscription has expired"""
+        if not self.is_active:
+            return True
+        if self.expires_at:
+            from django.utils import timezone
+            return timezone.now() > self.expires_at
+        return False
+    
+    def days_remaining(self):
+        """Get days remaining in subscription"""
+        if self.is_expired():
+            return 0
+        if self.expires_at:
+            from django.utils import timezone
+            delta = self.expires_at - timezone.now()
+            return max(0, delta.days)
+        return None
 
 class SystemSettings(models.Model):
     """Global system settings for dynamic configuration"""

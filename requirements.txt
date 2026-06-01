@@ -28,6 +28,9 @@ python-decouple==3.8
 python-dotenv==1.2.2
 python-http-client==3.3.7
 redis==7.4.0
+django-redis==6.1.0
+gunicorn==23.2.0
+uvicorn==0.23.0
 sendgrid==3.6.5
 sendgrid-django==4.2.0
 six==1.17.0

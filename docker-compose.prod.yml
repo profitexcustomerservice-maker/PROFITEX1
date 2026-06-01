@@ -10,7 +10,7 @@ services:
     depends_on:
       - db
       - redis
-    command: daphne -b 0.0.0.0 -p 8000 novaprofit.asgi:application
+    command: gunicorn novaprofit.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --workers 4 --threads 4 --timeout 120 --access-logfile - --error-logfile -
 
   celery:
     build: .
@@ -19,7 +19,7 @@ services:
     depends_on:
       - db
       - redis
-    command: celery -A novaprofit worker -l info
+    command: celery -A novaprofit worker -l info --concurrency=3
 
   celery-beat:
     build: .
@@ -28,7 +28,7 @@ services:
     depends_on:
       - db
       - redis
-    command: celery -A novaprofit beat -l info
+    command: celery -A novaprofit beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 
   redis:
     image: redis:7
@@ -36,17 +36,16 @@ services:
       - "6379:6379"
 
   db:
-    image: mysql:8.1
+    image: postgres:16
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: novaprofit_db
-      MYSQL_USER: novaprofit
-      MYSQL_PASSWORD: strong_password
+      POSTGRES_DB: novaprofit
+      POSTGRES_USER: novaprofit
+      POSTGRES_PASSWORD: strong_password
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  mysql_data:
+  postgres_data:

@@ -5,8 +5,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Profitex Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-+H3jBNUOnmEa9U6bV4Dq4SgQ2Qp8mKn0ZpGFrlb0zjDuhI0FJ8jdFvA9lNemM0rYhKEq3gDaFZy1zoO+tVr5iw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script>
         // ===== TOKEN MANAGEMENT =====
         const TokenManager = {
@@ -1084,7 +1086,7 @@
         <div class="header-left">
             <a href="/" class="logo">
                 <div class="logo-icon">
-                    <img src="{% static 'images/logo.png' %}" alt="Profitex Logo" />
+                    <img src="{% static 'images/logo.png' %}" alt="Profitex Logo" loading="lazy" decoding="async" />
                 </div>
                 <span>PROFITEX</span>
             </a>
@@ -1111,7 +1113,7 @@
                 <button class="user-btn" onclick="toggleUserDropdown()">
                     <div class="user-avatar">
                         {% if user.profile_image %}
-                        <img src="{{ user.profile_image.url }}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">
+                        <img src="{{ user.profile_image.url }}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" loading="lazy" decoding="async">
                         {% else %}
                         <i class="fas fa-user"></i>
                         {% endif %}

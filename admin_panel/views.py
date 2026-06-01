@@ -103,20 +103,34 @@ def admin_dashboard(request):
     from accounts.models import User
     from wallet.models import Wallet, CryptoDeposit, Withdrawal, Transaction
     from core.models import UserTask
-    
-    # Dashboard statistics
-    total_users = User.objects.count()
-    active_users = User.objects.filter(is_active=True).count()
-    
-    total_deposits_count = CryptoDeposit.objects.filter(status=CryptoDeposit.Status.APPROVED).count()
-    total_withdrawals_count = Withdrawal.objects.filter(status=Withdrawal.Status.APPROVED).count()
-    pending_deposits = CryptoDeposit.objects.filter(status=CryptoDeposit.Status.PENDING).count()
-    pending_withdrawals = Withdrawal.objects.filter(status=Withdrawal.Status.PENDING).count()
-    total_tasks_completed = UserTask.objects.count()
-    total_transactions = Transaction.objects.count()
-    
-    # Calculate total balance
-    total_balance = Wallet.objects.aggregate(total=models.Sum('balance'))['total'] or 0
+    from django.core.cache import cache
+
+    # Dashboard statistics cached briefly to reduce repeated aggregation overhead.
+    cache_key = 'admin_dashboard_stats'
+    stats = cache.get(cache_key)
+    if stats is None:
+        stats = {
+            'total_users': User.objects.count(),
+            'active_users': User.objects.filter(is_active=True).count(),
+            'total_deposits': CryptoDeposit.objects.filter(status=CryptoDeposit.Status.APPROVED).count(),
+            'total_withdrawals': Withdrawal.objects.filter(status=Withdrawal.Status.APPROVED).count(),
+            'pending_deposits': CryptoDeposit.objects.filter(status=CryptoDeposit.Status.PENDING).count(),
+            'pending_withdrawals': Withdrawal.objects.filter(status=Withdrawal.Status.PENDING).count(),
+            'total_tasks_completed': UserTask.objects.count(),
+            'total_transactions': Transaction.objects.count(),
+            'total_balance': Wallet.objects.aggregate(total=models.Sum('balance'))['total'] or 0,
+        }
+        cache.set(cache_key, stats, 120)
+
+    total_users = stats['total_users']
+    active_users = stats['active_users']
+    total_deposits_count = stats['total_deposits']
+    total_withdrawals_count = stats['total_withdrawals']
+    pending_deposits = stats['pending_deposits']
+    pending_withdrawals = stats['pending_withdrawals']
+    total_tasks_completed = stats['total_tasks_completed']
+    total_transactions = stats['total_transactions']
+    total_balance = stats['total_balance']
     
     # Recent activities
     recent_deposits = CryptoDeposit.objects.select_related('user').order_by('-created_at')[:5]

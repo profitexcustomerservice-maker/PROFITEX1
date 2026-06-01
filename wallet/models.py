@@ -72,6 +72,10 @@ class Transaction(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['transaction_type']),
+        ]
 
     def __str__(self):
         return f"{self.transaction_type} {self.amount}"
@@ -92,6 +96,9 @@ class Withdrawal(models.Model):
 
     class Meta:
         ordering = ("-requested_at",)
+        indexes = [
+            models.Index(fields=['user', 'status', 'requested_at']),
+        ]
 
     def __str__(self):
         return f"Withdrawal {self.amount} - {self.status}"
@@ -124,6 +131,9 @@ class CryptoDeposit(models.Model):
 
     class Meta:
         ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=['user', 'status', 'created_at']),
+        ]
 
     def __str__(self):
         return f"Crypto {self.amount} {self.payment_method.name} - {self.status}"

@@ -29,24 +29,35 @@ def user_can_do_tasks(user):
     if getattr(user, 'is_admin', False) or getattr(user, 'is_superuser', False):
         return True
 
-    minimum_deposit = Decimal('60.00')
+    # Users can perform tasks after they deposit funds or after they join a paid plan.
+    cache_key = f"user_task_access_{user.id}"
+    cached_result = cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
 
-    approved_crypto_total = CryptoDeposit.objects.filter(
-        user=user,
-        status=CryptoDeposit.Status.APPROVED
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    result = user_has_deposited(user) or UserPlan.objects.filter(user=user).exists()
+    cache.set(cache_key, result, 60)  # Cache briefly to avoid stale startup results
+    return result
 
-    deposit_tx_total = WalletTransaction.objects.filter(
-        user=user,
-        transaction_type=WalletTransaction.TransactionType.DEPOSIT
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-    has_joined_plan = UserPlan.objects.filter(user=user).exists()
+def user_has_deposited(user):
+    if not user or not user.is_authenticated:
+        return False
 
-    if has_joined_plan:
+    if getattr(user, 'is_admin', False) or getattr(user, 'is_superuser', False):
         return True
 
-    return (approved_crypto_total + deposit_tx_total) > minimum_deposit
+    has_approved_crypto = CryptoDeposit.objects.filter(
+        user=user,
+        status=CryptoDeposit.Status.APPROVED
+    ).exists()
+
+    has_deposit_tx = WalletTransaction.objects.filter(
+        user=user,
+        transaction_type=WalletTransaction.TransactionType.DEPOSIT
+    ).exists()
+
+    return has_approved_crypto or has_deposit_tx
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -60,7 +71,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAdminOrReadOnly,)
 
     def get_queryset(self):
-        qs = Task.objects.select_related().all().order_by("-created_at")
+        qs = Task.objects.all().order_by("-created_at")
         if self.request.user.is_authenticated and self.request.user.is_admin:
             return qs
         # Show active tasks to all authenticated users
@@ -79,6 +90,13 @@ class PlanViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated or not self.request.user.is_admin:
             return qs.filter(active=True)
         return qs
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def my_plan(self, request):
+        """Get current user's active plan information"""
+        from core.plan_utils import get_plan_info
+        plan_info = get_plan_info(request.user)
+        return JsonResponse(plan_info)
     
     def destroy(self, request, *args, **kwargs):
         """Override destroy to provide clearer errors and prevent deleting plans
@@ -111,7 +129,7 @@ class UserTaskViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
 
     def perform_create(self, serializer):
         if not user_can_do_tasks(self.request.user):
-            raise PermissionDenied("Tasks are available only after you deposit more than $60 and join a plan.")
+            raise PermissionDenied("Tasks are available only after you deposit funds or join a paid plan.")
 
         task = serializer.validated_data["task"]
         duration_spent = serializer.validated_data.get("duration_spent", 0)
@@ -134,14 +152,11 @@ class UserTaskViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
             # Add task reward to user wallet
             wallet, _ = Wallet.objects.get_or_create(user=self.request.user)
             
-            # Apply plan multiplier if user has an active plan
+            # Apply plan multiplier if user has an active plan (optimized - use select_related result)
             reward_amount = task.reward
-            try:
-                active_user_plan = UserPlan.objects.filter(user=self.request.user).select_related('plan').first()
-                if active_user_plan and active_user_plan.plan.reward_multiplier:
-                    reward_amount = task.reward * active_user_plan.plan.reward_multiplier
-            except Exception:
-                pass
+            active_user_plan = UserPlan.objects.filter(user=self.request.user).select_related('plan').first()
+            if active_user_plan and active_user_plan.plan.reward_multiplier:
+                reward_amount = task.reward * active_user_plan.plan.reward_multiplier
 
             wallet.add_balance(
                 amount=reward_amount,
@@ -179,6 +194,9 @@ class UserPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
         if UserPlan.objects.filter(user=self.request.user).exists():
             raise PermissionDenied("You have already joined a plan.")
 
+        if not user_has_deposited(self.request.user):
+            raise PermissionDenied("You must deposit funds before buying a plan.")
+
         with transaction.atomic():
             wallet, _ = Wallet.objects.get_or_create(user=self.request.user)
             if wallet.balance < plan.amount:
@@ -211,8 +229,14 @@ class UserPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
 
 @login_required
 def tasks_page(request):
+    # Cache the task access check result
+    cache_key = f"task_access_{request.user.id}"
+    task_access_allowed = cache.get(cache_key)
+    if task_access_allowed is None:
+        task_access_allowed = user_can_do_tasks(request.user)
+        cache.set(cache_key, task_access_allowed, 300)
     return render(request, "tasks.html", {
-        "task_access_allowed": user_can_do_tasks(request.user),
+        "task_access_allowed": task_access_allowed,
     })
 
 @login_required

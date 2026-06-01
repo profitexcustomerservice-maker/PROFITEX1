@@ -100,8 +100,8 @@ def dashboard(request):
     wallet, _ = Wallet.objects.select_related('user').get_or_create(user=request.user)
     balance = wallet.balance
     
-    # Get current plan - optimized query
-    current_plan = UserPlan.objects.filter(user=request.user).first()
+    # Get current plan with plan details in a single join
+    current_plan = UserPlan.objects.select_related('plan').filter(user=request.user).first()
     
     # Get completed tasks count - single database hit
     completed_tasks = UserTask.objects.filter(user=request.user).count()
@@ -140,17 +140,17 @@ def wallet_page(request):
         wallet, created = Wallet.objects.get_or_create(user=request.user)
         balance = wallet.balance
     
-    # Get user's current plan
-    current_plan = UserPlan.objects.filter(user=request.user).first()
-    
+    # Get user's current plan with plan details in a single join
+    current_plan = UserPlan.objects.select_related('plan').filter(user=request.user).first()
+
     # Get pending crypto deposits and withdrawals
     # We define 'deposits' as an empty list to satisfy old template logic
     deposits = []
-    crypto_deposits = CryptoDeposit.objects.filter(user=request.user, status=CryptoDeposit.Status.PENDING).order_by('-created_at')
+    crypto_deposits = CryptoDeposit.objects.filter(user=request.user, status=CryptoDeposit.Status.PENDING).select_related('payment_method').order_by('-created_at')
     withdrawals = Withdrawal.objects.filter(user=request.user, status=Withdrawal.Status.PENDING).order_by('-requested_at')
     
     # Get transactions
-    transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')[:10]
+    transactions = Transaction.objects.filter(user=request.user).select_related('wallet').order_by('-created_at')[:10]
     
     from wallet.models import PaymentMethod
     payment_methods = PaymentMethod.objects.filter(is_active=True).order_by('name')
@@ -252,19 +252,10 @@ def login_page(request):
         user = authenticate(request, username=email, password=password)
 
         if user is not None:
-            # Create OTP and send to user's email, then store pending login in session
-            otp, sent = create_and_send_otp(user)
-            if not otp or not sent:
-                logger.error(f"OTP send failed for {email}")
-                return render(request, "accounts/login.html", {'error': 'Unable to send verification code. Try again later.', 'email': email})
-
-            if settings.DEBUG and otp:
-                request.session['debug_otp_code'] = otp.code
-
-            request.session['pending_login_user_id'] = user.id
-            request.session['pending_login_email'] = user.email
-            request.session.modified = True
-            return redirect('otp_verify')
+            login(request, user)
+            from wallet.models import Wallet
+            Wallet.objects.get_or_create(user=user)
+            return redirect('dashboard')
         else:
             logger.error(f"LOGIN FAILED for {email}")
             return render(request, "accounts/login.html", {'error': 'Invalid email or password', 'email': email})

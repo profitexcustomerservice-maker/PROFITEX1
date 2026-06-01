@@ -367,47 +367,201 @@ function updateTimer() {
     
     document.getElementById('timer').textContent = 
         `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    // Update time display for specific task types
-    const timeElement = document.getElementById('advertise-time') || 
-                        document.getElementById('study-time');
-    if (timeElement) {
-        timeElement.textContent = elapsed;
+    <script src="{% static 'js/task-timer.js' %}"></script>
+<script>
+let currentTask = null;
+let currentTimer = null;
+let currentLinkTracker = null;
+let currentSubmissionId = null;
+
+// Get task ID from URL
+const taskId = window.location.pathname.split('/').pop();
+
+window.addEventListener('DOMContentLoaded', () => {
+    loadTaskDetail();
+});
+
+function loadTaskDetail() {
+    apiFetch(`/api/tasks/${taskId}/`)
+        .then(handleJsonResponse)
+        .then(data => {
+            currentTask = data;
+            displayTaskDetail(data);
+        })
+        .catch(error => {
+            document.getElementById('task-content').innerHTML = 
+                `<p style="color: var(--danger);">Error loading task: ${error.message}</p>`;
+        });
+}
+
+function displayTaskDetail(task) {
+    const preview = new TaskPreview(task);
+    const content = `
+        <div style="padding: 24px;">
+            <div class="task-header" style="margin-bottom: 24px;">
+                <h1>${task.title}</h1>
+                <p class="text-muted">${task.description}</p>
+                <div style="display: flex; gap: 16px; margin-top: 16px;">
+                    <span class="badge bg-primary">${task.task_type}</span>
+                    <span class="badge bg-success">$${task.reward_amount}</span>
+                    ${task.premium_only > 0 ? `<span class="badge bg-warning">Plan ${task.premium_only}+</span>` : ''}
+                </div>
+            </div>
+
+            <div class="task-media" style="margin: 24px 0;">
+                ${preview.getThumbnailHtml()}
+            </div>
+
+            ${task.media_type === 'link' && task.ad_url ? `
+                <div class="alert alert-info">
+                    <strong>⏱️ Important:</strong> Click the button below to open the link. 
+                    ${task.required_duration ? `You must keep it open for at least <strong>${Math.floor(task.required_duration / 60)}:${(task.required_duration % 60).toString().padStart(2, '0')}</strong> (${task.required_duration} seconds).` : ''}
+                </div>
+
+                ${task.required_duration ? `
+                    <div class="progress" style="margin: 16px 0; height: 30px;">
+                        <div id="timer-progress-${currentSubmissionId}" 
+                             class="progress-bar bg-danger" 
+                             role="progressbar" 
+                             style="width: 0%;" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            <span id="timer-display-${currentSubmissionId}" style="color: white; line-height: 30px;">00:00</span>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <button class="btn btn-lg btn-primary btn-block" style="padding: 12px; margin: 16px 0;" 
+                        onclick="openTaskLink('${task.ad_url}', '${currentSubmissionId}')">
+                    <i class="fas fa-external-link-alt"></i> Open Link & Start Timer
+                </button>
+            ` : ''}
+
+            ${task.media_type === 'image' ? `
+                <button class="btn btn-lg btn-primary btn-block" style="padding: 12px; margin: 16px 0;" 
+                        onclick="viewTaskImage()">
+                    <i class="fas fa-image"></i> View Full Image
+                </button>
+            ` : ''}
+
+            ${task.survey_data && Object.keys(task.survey_data).length > 0 ? `
+                <div class="survey-container">
+                    <h3>Survey Questions</h3>
+                    <div id="survey-form"></div>
+                </div>
+            ` : ''}
+
+            <div style="text-align: center; margin-top: 24px;">
+                <button class="btn btn-success btn-lg" onclick="submitTask()">
+                    <i class="fas fa-check"></i> Submit Task
+                </button>
+            </div>
+        </div>
+    `;
+    document.getElementById('task-content').innerHTML = content;
+
+    // Initialize form if survey
+    if (task.survey_data && Object.keys(task.survey_data).length > 0) {
+        renderSurveyForm(task.survey_data);
     }
 }
 
-function completeTask() {
-    const completionData = {
-        task_id: currentTask.id,
-        duration_spent: Math.floor((Date.now() - startTime) / 1000) || 0
-    };
-    
-    // Add task-specific data
-    if (currentTask.task_type === 'survey') {
-        const surveyAnswers = {};
-        document.querySelectorAll('[name^="question_"]').forEach(input => {
-            if (input.type === 'radio' && input.checked) {
-                surveyAnswers[input.name] = input.value;
-            } else if (input.type === 'textarea') {
-                surveyAnswers[input.name] = input.value;
-            }
+function openTaskLink(url, submissionId) {
+    // Create submission first if not exists
+    if (!currentSubmissionId) {
+        createTaskSubmission().then(submission => {
+            currentSubmissionId = submission.id;
+            currentTimer = new TaskTimer(submissionId || submission.id, currentTask.required_duration);
+            currentTimer.start();
+            currentLinkTracker = new LinkTracker(submissionId || submission.id);
+            currentLinkTracker.trackLinkOpen(url);
         });
-        completionData.survey_answers = surveyAnswers;
+    } else {
+        currentTimer = new TaskTimer(submissionId, currentTask.required_duration);
+        currentTimer.start();
+        currentLinkTracker = new LinkTracker(submissionId);
+        currentLinkTracker.trackLinkOpen(url);
     }
-    
-    // Validate minimum duration
-    if (completionData.duration_spent < currentTask.required_duration) {
-        showToast(`You must spend at least ${currentTask.required_duration} seconds on this task.`, 'warning');
+}
+
+function viewTaskImage() {
+    // Open image in modal or new window
+    if (currentTask.media) {
+        window.open(currentTask.media, '_blank');
+    }
+}
+
+function createTaskSubmission() {
+    return apiFetch('/api/submissions/', {
+        method: 'POST',
+        body: JSON.stringify({ task: currentTask.id })
+    })
+    .then(handleJsonResponse)
+    .catch(error => {
+        showToast('Error creating submission: ' + error.message, 'danger');
+        throw error;
+    });
+}
+
+function submitTask() {
+    if (!currentSubmissionId) {
+        showToast('Please complete the task first', 'warning');
         return;
     }
-    
-    // Submit completion
-    apiFetch('/api/user-tasks/', {
-        method: 'POST',
-        body: JSON.stringify(completionData)
+
+    // Stop timer if running
+    if (currentTimer && currentTimer.isRunning) {
+        currentTimer.stop().then(result => {
+            if (result.success && result.data.minimum_duration_met) {
+                completeSubmission();
+            } else {
+                showToast(result.message, 'warning');
+            }
+        });
+    } else {
+        completeSubmission();
+    }
+}
+
+function completeSubmission() {
+    apiFetch(`/api/submissions/${currentSubmissionId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'PENDING' })
     })
-    .then(response => response.json())
+    .then(handleJsonResponse)
     .then(data => {
+        showToast('Task submitted successfully!', 'success');
+        setTimeout(() => {
+            window.location.href = '/tasks/';
+        }, 1500);
+    })
+    .catch(error => {
+        showToast('Error submitting task: ' + error.message, 'danger');
+    });
+}
+
+function renderSurveyForm(surveyData) {
+    const formHtml = Object.entries(surveyData).map(([question, options]) => {
+        if (Array.isArray(options)) {
+            return `
+                <div style="margin-bottom: 16px;">
+                    <label>${question}</label>
+                    ${options.map(option => `
+                        <div>
+                            <input type="radio" name="question_${Object.keys(surveyData).indexOf(question)}" value="${option}">
+                            <label>${option}</label>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        return '';
+    }).join('');
+    
+    document.getElementById('survey-form').innerHTML = formHtml;
+}
+</script>
         if (data.success) {
             showToast(`Task completed successfully! You earned $${data.reward_earned.toFixed(2)}`, 'success');
             closeModal();

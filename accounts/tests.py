@@ -50,7 +50,7 @@ class PasswordResetOtpFlowTests(TestCase):
         self.assertRedirects(verify_response, reverse('login_page'))
         self.assertRedirects(resend_response, reverse('login_page'))
 
-    def test_login_requires_otp_before_access(self):
+    def test_login_redirects_directly_to_dashboard(self):
         user = User.objects.create_user(email='login@example.com', password='Secret1234')
 
         response = self.client.post(
@@ -58,20 +58,6 @@ class PasswordResetOtpFlowTests(TestCase):
             {'email': user.email, 'password': 'Secret1234'},
         )
 
-        self.assertRedirects(response, reverse('otp_verify'))
-        self.assertEqual(OTP.objects.count(), 1)
-        self.assertIsNone(self.client.session.get('_auth_user_id'))
-
-    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
-    def test_otp_is_sent_to_user_email(self):
-        user = User.objects.create_user(email='alice@example.com', password='Secret1234')
-
-        response = self.client.post(
-            reverse('login_page'),
-            {'email': user.email, 'password': 'Secret1234'},
-        )
-
-        self.assertRedirects(response, reverse('otp_verify'))
-        self.assertEqual(OTP.objects.count(), 1)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, [user.email])
+        self.assertRedirects(response, reverse('dashboard'))
+        self.assertEqual(OTP.objects.count(), 0)
+        self.assertEqual(self.client.session.get('_auth_user_id'), str(user.id))

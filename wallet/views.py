@@ -38,8 +38,8 @@ def transactions_page(request):
         balance = 0.00
     
     # Get user's transactions
-    transactions = Transaction.objects.filter(user=user).order_by('-created_at')
-    
+    transactions = Transaction.objects.filter(user=user).select_related('wallet').order_by('-created_at')[:50]
+
     # Get pending withdrawals
     withdrawals = Withdrawal.objects.filter(user=user).order_by('-requested_at')
     

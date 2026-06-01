@@ -93,6 +93,10 @@ def send_otp_email(user, otp):
 
 def queue_send_otp_email(user, otp):
     """Queue OTP email delivery via Celery when available, with fallback to sync send."""
+    if settings.DEBUG:
+        print("DEBUG mode: sending OTP email synchronously instead of queueing through Celery.")
+        return send_otp_email(user, otp)
+
     try:
         from .tasks import send_otp_email_task
         send_otp_email_task.delay(user.email, otp)

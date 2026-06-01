@@ -132,7 +132,7 @@ except Exception as e:
     import traceback
     traceback.print_exc()
         
-# Create admin user if not exists
+# Create admin user if not exists using environment variables only
 print("\nSetting up admin user...")
 try:
     # Import Django setup first
@@ -143,82 +143,42 @@ try:
     from django.contrib.auth import get_user_model
     User = get_user_model()
     
-    # ALWAYS setup hardcoded admin user (independent of env vars)
-    admin_email = "josuekabalisa@gmail.com"
-    admin_password = "Uwamahor12345@@"
+    admin_email = os.environ.get("ADMIN_EMAIL", "").strip()
+    admin_password = os.environ.get("ADMIN_PASSWORD", "").strip()
     
-    admin_user = User.objects.filter(email=admin_email).first()
-    if admin_user:
-        # Ensure flags are set and password is correct
-        updated = False
-        if not admin_user.is_active:
-            admin_user.is_active = True
-            updated = True
-        if not admin_user.is_admin:
-            admin_user.is_admin = True
-            updated = True
-        if not admin_user.is_staff:
-            admin_user.is_staff = True
-            updated = True
-        if not admin_user.is_superuser:
-            admin_user.is_superuser = True
-            updated = True
-        
-        # Always ensure password is set to the correct one
+    if admin_email and admin_password:
+        admin_user, created = User.objects.get_or_create(email=admin_email)
+        admin_user.is_active = True
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
+        admin_user.is_admin = True
         admin_user.set_password(admin_password)
         admin_user.save()
-        print(f"✓ Updated admin user: {admin_email}")
-        print(f"  - Password reset to default credentials")
+        if created:
+            print(f"✓ Created admin user: {admin_email}")
+        else:
+            print(f"✓ Updated admin user: {admin_email}")
         print(f"  - Flags: is_active={admin_user.is_active}, is_admin={admin_user.is_admin}, is_staff={admin_user.is_staff}, is_superuser={admin_user.is_superuser}")
     else:
-        # Create new admin user
-        admin_user = User.objects.create_superuser(
-            email=admin_email,
-            password=admin_password,
-            first_name='Admin',
-            last_name='User'
-        )
-        admin_user.is_admin = True
-        admin_user.save()
-        print(f"✓ Created admin user: {admin_email}")
-    
-    print(f"  - Flags: is_active={admin_user.is_active}, is_admin={admin_user.is_admin}, is_staff={admin_user.is_staff}, is_superuser={admin_user.is_superuser}")
-    
-    # Also check for env var based superuser for backward compatibility
+        print("⚠ ADMIN_EMAIL and ADMIN_PASSWORD are not set. Skipping admin user setup.")
+
     superuser_email = os.environ.get("SUPERUSER_EMAIL", "").strip()
     superuser_password = os.environ.get("SUPERUSER_PASSWORD", "").strip()
-    
-    if superuser_email and superuser_password:
-        user = User.objects.filter(email=superuser_email).first()
-        if user:
-            updated = False
-            if not user.is_staff:
-                user.is_staff = True
-                updated = True
-            if not user.is_superuser:
-                user.is_superuser = True
-                updated = True
-            if not user.is_admin:
-                user.is_admin = True
-                updated = True
-            if not user.is_active:
-                user.is_active = True
-                updated = True
-            if updated:
-                user.save()
-            print(f"✓ Updated env-based superuser: {superuser_email}")
+    if superuser_email and superuser_password and superuser_email != admin_email:
+        user, created = User.objects.get_or_create(email=superuser_email)
+        user.is_active = True
+        user.is_staff = True
+        user.is_superuser = True
+        user.is_admin = True
+        user.set_password(superuser_password)
+        user.save()
+        if created:
+            print(f"✓ Created superuser: {superuser_email}")
         else:
-            user = User.objects.create_superuser(
-                email=superuser_email,
-                password=superuser_password
-            )
-            user.is_admin = True
-            user.save()
-            print(f"✓ Created env-based superuser: {superuser_email}")
+            print(f"✓ Updated superuser: {superuser_email}")
     
-    # Verify by checking total users
     print(f"\n  Total users in database: {User.objects.count()}")
-    
+
 except Exception as e:
     error_msg = str(e)
     print(f"⚠ Admin setup warning: {error_msg}")
