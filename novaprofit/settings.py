@@ -31,7 +31,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 print(f"[STARTUP] DEBUG={DEBUG}, ALLOWED_HOSTS_ENV={os.environ.get('ALLOWED_HOSTS', '')}")
 
 # Configure ALLOWED_HOSTS based on environment
-# First try to read from environment variable (for Render)
+# First try to read from environment variable (for Render/PythonAnywhere)
 _allowed_hosts_env = os.environ.get("ALLOWED_HOSTS", "").strip()
 if _allowed_hosts_env:
     # Parse comma-separated list from environment
@@ -42,6 +42,7 @@ if _allowed_hosts_env:
 elif DEBUG:
     ALLOWED_HOSTS = [
         'novaprofit.onrender.com',
+        'profitexcustomerservice.pythonanywhere.com',
         'localhost',
         '127.0.0.1',
         'testserver'
@@ -50,6 +51,7 @@ else:
     ALLOWED_HOSTS = [
         "novaprofit.onrender.com",
         ".onrender.com",
+        "profitexcustomerservice.pythonanywhere.com",
     ]
 
 if not DEBUG and _is_placeholder(SECRET_KEY):
