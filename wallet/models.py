@@ -59,6 +59,7 @@ class Transaction(models.Model):
     class TransactionType(models.TextChoices):
         TASK_REWARD = "TASK_REWARD", "Task Reward"
         ACTIVITY_REWARD = "ACTIVITY_REWARD", "Activity Reward"
+        REFERRAL_REWARD = "REFERRAL_REWARD", "Referral Reward"
         DEPOSIT = "DEPOSIT", "Deposit"
         WITHDRAWAL = "WITHDRAWAL", "Withdrawal"
         ADJUSTMENT = "ADJUSTMENT", "Adjustment"
@@ -160,6 +161,12 @@ class CryptoDeposit(models.Model):
                 reference=f"CRYPTO-{self.transaction_hash[:10]}"
             )
             wallet.refresh_from_db()
+
+            try:
+                from accounts.signals import apply_referral_reward_to_referrer
+                apply_referral_reward_to_referrer(self.user)
+            except Exception:
+                pass
 
             deposit_amount = float(self.amount)
             plan_level = 0

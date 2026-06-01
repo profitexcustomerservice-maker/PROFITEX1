@@ -2,8 +2,12 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from django.conf import settings
+
 from accounts.models import OTP
 from accounts.models import User
+from accounts.models import Referral
+from wallet.models import Wallet, Transaction, CryptoDeposit, PaymentMethod
 
 
 @override_settings(
@@ -61,3 +65,47 @@ class PasswordResetOtpFlowTests(TestCase):
         self.assertRedirects(response, reverse('dashboard'))
         self.assertEqual(OTP.objects.count(), 0)
         self.assertEqual(self.client.session.get('_auth_user_id'), str(user.id))
+
+
+class ReferralRewardTests(TestCase):
+    def setUp(self):
+        self.referrer = User.objects.create_user(email='referrer@example.com', password='Secret1234')
+        self.referred = User.objects.create_user(email='referred@example.com', password='Secret1234')
+        self.referred.referred_by = self.referrer
+        self.referred.save(update_fields=['referred_by'])
+        Referral.objects.create(referrer=self.referrer, referred_user=self.referred)
+
+        self.payment_method = PaymentMethod.objects.create(
+            name='USDT',
+            network='TRC20',
+            wallet_address='test-address',
+            is_active=True,
+        )
+
+    def test_referrer_gets_reward_on_first_crypto_deposit_approval(self):
+        deposit = CryptoDeposit.objects.create(
+            user=self.referred,
+            payment_method=self.payment_method,
+            amount=10,
+            transaction_hash='hash1',
+            status=CryptoDeposit.Status.PENDING,
+        )
+
+        wallet = Wallet.objects.get(user=self.referrer)
+        self.assertEqual(wallet.balance, 0)
+
+        deposit.approve()
+
+        wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, settings.REFERRAL_REWARD_AMOUNT)
+
+        transaction = Transaction.objects.filter(
+            user=self.referrer,
+            transaction_type=Transaction.TransactionType.REFERRAL_REWARD,
+        ).first()
+        self.assertIsNotNone(transaction)
+        self.assertEqual(float(transaction.amount), settings.REFERRAL_REWARD_AMOUNT)
+
+        referral = Referral.objects.get(referrer=self.referrer, referred_user=self.referred)
+        self.assertEqual(float(referral.reward_amount), settings.REFERRAL_REWARD_AMOUNT)
+        self.assertFalse(referral.is_active)

@@ -26,6 +26,19 @@
     font-size: 1.125rem;
 }
 
+.section-icon,
+.header-icon,
+.plan-tag i,
+.subscription-badge i,
+.active-plan-icon {
+    margin-right: 8px;
+    font-size: 1rem;
+}
+
+.active-plan-notice i {
+    margin-right: 10px;
+}
+
 .plans-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -90,6 +103,21 @@
 .plan-header {
     text-align: center;
     margin-bottom: 24px;
+}
+
+.plan-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 16px;
 }
 
 .plan-name {
@@ -247,10 +275,20 @@
     color: #10b981;
 }
 
-.subscription-status.expired {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-}
+    .subscription-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-top: 6px;
+    }
 
 .subscription-details {
     color: rgba(255, 255, 255, 0.7);
@@ -447,11 +485,12 @@
 
 <div class="plans-container">
     <div class="plans-header">
-        <h1>Investment Plans</h1>
+        <h1><i class="fas fa-clipboard-list header-icon"></i>Investment Plans</h1>
         <p>Choose a plan that fits your investment goals and maximize your earnings.</p>
     </div>
 
     <div id="active-plan-notice" style="display:none; margin-bottom: 24px; padding: 20px; border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; background: rgba(16, 185, 129, 0.08); color: #0f5132;">
+        <i class="fas fa-info-circle active-plan-icon"></i>
         You already have an active plan. New plan joins are disabled until your current subscription ends.
     </div>
 
@@ -491,10 +530,15 @@ window.addEventListener('DOMContentLoaded', () => {
                 activePlanNotice.style.display = hasActivePlan ? 'block' : 'none';
 
                 if (hasActivePlan) {
-                    subscriptionList.innerHTML = data.results.map(item => `
+                    subscriptionList.innerHTML = data.results.map(item => {
+                        const badgeText = item.plan.badge_text?.trim();
+                        return `
                         <div class="subscription-card">
                             <div class="subscription-header">
-                                <div class="subscription-plan">${item.plan.title}</div>
+                                <div>
+                                    <div class="subscription-plan">${item.plan.title}</div>
+                                    ${badgeText ? `<div class="subscription-badge"><i class="fas fa-tag"></i>${badgeText}</div>` : ''}
+                                </div>
                                 <span class="subscription-status active">Active</span>
                             </div>
                             <div class="subscription-details">
@@ -504,7 +548,8 @@ window.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>Joined:</strong> ${new Date(item.joined_at).toLocaleDateString()}</p>
                             </div>
                         </div>
-                    `).join('');
+                    `;
+                    }).join('');
                 } else {
                     subscriptionList.innerHTML = `
                         <div class="empty-state" style="grid-column: 1 / -1;">
@@ -538,17 +583,19 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (data.results && data.results.length > 0) {
                     planList.innerHTML = data.results.map((plan, index) => {
                         const isFeatured = index === 1;
+                        const customBadge = plan.badge_text?.trim();
                         const planButton = hasActivePlan ? '' : `
                             <button class="plan-btn" ${walletBalance < Number(plan.amount || 0) ? 'disabled' : ''} onclick="joinPlan(${plan.id}, this)">
-                                <span class="btn-text">${walletBalance < Number(plan.amount || 0) ? `Need $${(Number(plan.amount || 0) - walletBalance).toFixed(2)}` : 'Join Plan'}</span>
+                                <span class="btn-text">${walletBalance < Number(plan.amount || 0) ? `Need $${(Number(plan.amount || 0) - walletBalance).toFixed(2)}` : '<i class="fas fa-arrow-right"></i> Join Plan'}</span>
                                 <div class="spinner"></div>
                             </button>
                         `;
 
                         return `
                             <div class="plan-card ${isFeatured ? 'featured' : ''}">
-                                ${isFeatured ? '<div class="featured-badge">Popular</div>' : ''}
+                                ${isFeatured && !customBadge ? '<div class="featured-badge"><i class="fas fa-star"></i> Popular</div>' : ''}
                                 <div class="plan-header">
+                                    ${customBadge ? `<div class="plan-tag"><i class="fas fa-tag"></i>${customBadge}</div>` : ''}
                                     <div class="plan-name">${plan.title || `Plan ${plan.plan_level}`}</div>
                                     <div class="plan-price">$${plan.amount || 0}<span>/one-time</span></div>
                                     <div class="plan-duration">${plan.duration_days || 0} days</div>

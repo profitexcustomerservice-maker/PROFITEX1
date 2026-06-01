@@ -1,7 +1,9 @@
+from decimal import Decimal
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.contrib import messages
+from wallet.models import Transaction, Wallet
 from .models import User, SocialLink
 
 class CustomUserChangeForm(UserChangeForm):
@@ -14,10 +16,17 @@ class CustomUserCreationForm(UserCreationForm):
         model = User
         fields = ("email",)
 
+class WalletInline(admin.StackedInline):
+    model = Wallet
+    can_delete = False
+    readonly_fields = ("updated_at",)
+    extra = 0
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
+    inlines = [WalletInline]
     list_display = ("email", "first_name", "last_name", "current_plan_level", "is_admin", "is_staff", "is_active")
     search_fields = ("email", "first_name", "last_name")
     list_filter = ("is_active", "is_staff", "is_admin", "current_plan_level")
@@ -37,6 +46,29 @@ class UserAdmin(BaseUserAdmin):
     )
     filter_horizontal = ("groups", "user_permissions")
     actions = ["block_users", "unblock_users", "make_admin", "remove_admin"]
+
+    def save_formset(self, request, form, formset, change):
+        if formset.model == Wallet:
+            balance_changes = []
+            for inline_form in formset.forms:
+                if inline_form.instance.pk and inline_form.has_changed() and "balance" in inline_form.changed_data:
+                    old_balance = Wallet.objects.filter(pk=inline_form.instance.pk).values_list("balance", flat=True).first()
+                    if old_balance is not None:
+                        new_balance = Decimal(inline_form.cleaned_data.get("balance"))
+                        diff = new_balance - old_balance
+                        balance_changes.append((inline_form.instance.user, inline_form.instance, diff))
+            super().save_formset(request, form, formset, change)
+            for user, wallet, diff in balance_changes:
+                if diff != Decimal("0"):
+                    Transaction.objects.create(
+                        user=user,
+                        wallet=wallet,
+                        amount=diff,
+                        transaction_type=Transaction.TransactionType.ADJUSTMENT,
+                        reference=f"Admin balance change by {request.user.email}",
+                    )
+            return
+        super().save_formset(request, form, formset, change)
 
     def block_users(self, request, queryset):
         updated = queryset.update(is_active=False)

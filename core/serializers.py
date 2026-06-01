@@ -4,12 +4,19 @@ from .models import Plan, Task, UserTask, UserPlan
 class TaskSerializer(serializers.ModelSerializer):
     task_type = serializers.CharField(source='media_type', read_only=True)
     duration = serializers.IntegerField(read_only=True)
+    thumbnail_url = serializers.SerializerMethodField()
     can_perform = serializers.SerializerMethodField()
     
     class Meta:
         model = Task
-        fields = ("id", "title", "description", "reward", "media", "media_type", "task_type", "duration", "active", "created_at", "can_perform")
+        fields = ("id", "title", "description", "reward", "media", "media_type", "task_type", "duration", "thumbnail_url", "active", "created_at", "can_perform")
         read_only_fields = ("created_at",)
+    
+    def get_thumbnail_url(self, obj):
+        if obj.media and obj.media_type == 'image':
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.media) if request else obj.media
+        return None
     
     def get_can_perform(self, obj):
         """Check if current user can perform this task"""
@@ -26,7 +33,7 @@ class PlanSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Plan
-        fields = ("id", "plan_level", "title", "description", "amount", "reward_multiplier", "daily_earning_limit", "max_tasks_per_day", "duration_days", "active", "created_at")
+        fields = ("id", "plan_level", "title", "description", "badge_text", "amount", "reward_multiplier", "daily_earning_limit", "max_tasks_per_day", "duration_days", "active", "created_at")
         read_only_fields = ("created_at",)
 
     def validate_plan_level(self, value):

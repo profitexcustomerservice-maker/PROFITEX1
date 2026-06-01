@@ -1,11 +1,12 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
-from .models import User, SocialLink
+from .models import User, SocialLink, Referral
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    referral_code = serializers.CharField(write_only=True, required=False, allow_blank=True)
     email = serializers.EmailField(
         validators=[
             UniqueValidator(
@@ -17,17 +18,33 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "password", "first_name", "last_name")
+        fields = ("email", "password", "first_name", "last_name", "referral_code")
 
     def create(self, validated_data):
         # Normalize email to lower-case for consistent uniqueness checks
+        referral_code = validated_data.pop('referral_code', '').strip().upper()
         validated_data['email'] = validated_data.get('email', '').strip().lower()
-        return User.objects.create_user(**validated_data)
+
+        if referral_code:
+            referrer = User.objects.filter(referral_code=referral_code).first()
+            if not referrer:
+                raise serializers.ValidationError({"referral_code": "Invalid referral code."})
+            validated_data['referred_by'] = referrer
+
+        user = User.objects.create_user(**validated_data)
+
+        if referral_code and user.referred_by:
+            Referral.objects.create(referrer=user.referred_by, referred_user=user)
+
+        return user
 
 class UserSerializer(serializers.ModelSerializer):
     wallet_balance = serializers.SerializerMethodField()
     plan_name = serializers.SerializerMethodField()
     tasks_completed = serializers.SerializerMethodField()
+    referral_code = serializers.CharField(read_only=True)
+    referred_by = serializers.SerializerMethodField()
+    referral_link = serializers.SerializerMethodField()
 
     profile_image = serializers.ImageField(required=False, allow_null=True)
 
@@ -37,7 +54,7 @@ class UserSerializer(serializers.ModelSerializer):
             "id", "email", "first_name", "last_name", "current_plan_level", 
             "profile_image", "is_admin", "is_staff", "is_active", 
             "is_superuser", "last_active", "last_rewarded_at", "created_at", 
-            "wallet_balance", "plan_name", "tasks_completed"
+            "wallet_balance", "plan_name", "tasks_completed", "referral_code", "referred_by", "referral_link"
         )
         extra_kwargs = {
             "email": {"read_only": True},
@@ -49,6 +66,14 @@ class UserSerializer(serializers.ModelSerializer):
         if hasattr(obj, "wallet"):
             return float(obj.wallet.balance)
         return 0.0
+
+    def get_referred_by(self, obj):
+        return obj.referred_by.email if obj.referred_by else None
+
+    def get_referral_link(self, obj):
+        if not obj.referral_code:
+            return None
+        return f"/register/?referral_code={obj.referral_code}"
 
     def get_plan_name(self, obj):
         from core.models import UserPlan

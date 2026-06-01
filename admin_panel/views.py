@@ -45,27 +45,21 @@ def admin_login(request):
     except:
         pass
     
-    # If already authenticated and is admin, redirect to dashboard
-    if request.user.is_authenticated:
-        if request.user.is_admin or request.user.is_superuser:
-            return redirect('/admin_panel/')
-        logout(request)
-        return render(request, 'admin/login.html', {
-            'error': 'Please sign in with an admin account.'
-        })
-    
     if request.method == 'POST':
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '').strip()
         error = None
-        
+
+        if request.user.is_authenticated and not (request.user.is_admin or request.user.is_superuser):
+            logout(request)
+
         if not email or not password:
             error = 'Email and password required.'
         else:
             try:
                 User = get_user_model()
                 user = User.objects.filter(email__iexact=email).first()
-                
+
                 # Validate credentials
                 if not user:
                     error = 'Invalid email or password.'
@@ -77,20 +71,27 @@ def admin_login(request):
                     error = 'You do not have admin privileges.'
                 else:
                     # All checks passed - log in the user
-                    # Use backend property to make session valid
                     user.backend = 'django.contrib.auth.backends.ModelBackend'
                     login(request, user)
                     logger.info(f"Admin login successful: {email}")
                     return redirect('/admin_panel/')
-                    
+
             except Exception as e:
                 logger.exception(f"Login error: {e}")
                 error = f'Error: {str(e)}'
-        
+
         if error:
             logger.warning(f"Login failed: {error}")
             return render(request, 'admin/login.html', {'error': error})
-    
+
+    elif request.user.is_authenticated:
+        if request.user.is_admin or request.user.is_superuser:
+            return redirect('/admin_panel/')
+        logout(request)
+        return render(request, 'admin/login.html', {
+            'error': 'Please sign in with an admin account.'
+        })
+
     return render(request, 'admin/login.html')
 
 def admin_logout(request):

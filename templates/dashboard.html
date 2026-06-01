@@ -986,6 +986,14 @@
                 <span>Portfolio Health</span>
                 <strong>Stable</strong>
             </div>
+            <div class="hero-metric">
+                <span>Referrals</span>
+                <strong>{{ referred_count }}</strong>
+            </div>
+            <div class="hero-metric">
+                <span>Referral Rewards</span>
+                <strong>${{ referral_reward_total|floatformat:2 }}</strong>
+            </div>
         </div>
     </div>
 
@@ -1151,6 +1159,34 @@
             <div class="stat-value">{{ unread_notifications }}</div>
             <div class="stat-change">Unread messages</div>
         </div>
+
+        <!-- Referral Summary -->
+        <div class="stat-card referrals-card">
+            <div class="stat-icon">
+                <i class="fas fa-user-friends"></i>
+            </div>
+            <div class="stat-label">Referrals</div>
+            <div class="stat-value">{{ referred_count }}</div>
+            <div class="stat-change">Joined with your code</div>
+        </div>
+    </div>
+
+    <div class="referrals-section" style="margin-bottom: 32px;">
+        <div class="showcase-card" style="padding: 24px;">
+            <h3><i class="fas fa-share-alt"></i> Your Recent Referrals</h3>
+            {% if recent_referred_users %}
+            <ul style="list-style:none; padding:0; margin:16px 0 0 0; color:#cbd5e1;">
+                {% for referral in recent_referred_users %}
+                <li style="padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <strong>{{ referral.first_name }} {{ referral.last_name }}</strong>
+                    <div style="font-size:0.9rem; color:#94a3b8;">{{ referral.email }} • Joined {{ referral.created_at|date:'M d, Y' }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="color:#94a3b8; margin-top:16px;">No users have joined yet. Share your referral code to start inviting friends.</p>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Quick Actions -->
@@ -1185,6 +1221,14 @@
             </div>
             <div class="action-card-title">Transactions</div>
             <div class="action-card-desc">View your transaction history</div>
+        </a>
+
+        <a href="/referrals/" class="action-card">
+            <div class="action-card-icon">
+                <i class="fas fa-share-alt"></i>
+            </div>
+            <div class="action-card-title">Referral details</div>
+            <div class="action-card-desc">See rewards and conversion stats</div>
         </a>
     </div>
 

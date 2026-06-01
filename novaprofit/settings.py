@@ -100,6 +100,7 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     CSRF_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_SAMESITE = "Lax"
     SECURE_BROWSER_XSS_FILTER = os.environ.get("SECURE_BROWSER_XSS_FILTER", "True").lower() in ("1", "true", "yes")
     SECURE_CONTENT_TYPE_NOSNIFF = os.environ.get("SECURE_CONTENT_TYPE_NOSNIFF", "True").lower() in ("1", "true", "yes")
     X_FRAME_OPTIONS = os.environ.get("X_FRAME_OPTIONS", "DENY")
@@ -347,6 +348,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 CACHE_MIDDLEWARE_ALIAS = 'default'
 CACHE_MIDDLEWARE_SECONDS = int(os.environ.get('CACHE_MIDDLEWARE_SECONDS', 300))
 CACHE_MIDDLEWARE_KEY_PREFIX = 'novaprofit'
@@ -365,6 +367,7 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'profitexcustomerservice@gmail.co
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 # Use email from environment or fallback
 DEFAULT_FROM_EMAIL = f"Profitx Support <{EMAIL_HOST_USER}>"
+REFERRAL_REWARD_AMOUNT = config("REFERRAL_REWARD_AMOUNT", default=10.00, cast=float)
 
 # Check if we should force console backend (development or when SMTP unavailable)
 FORCE_CONSOLE_EMAIL = os.environ.get('EMAIL_FORCE_CONSOLE', 'false').lower() in ('1', 'true', 'yes')
@@ -427,6 +430,12 @@ elif not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
         "For Gmail, generate an App Password at https://myaccount.google.com/apppasswords "
         "For SendGrid, get API Key at https://sendgrid.com",
         RuntimeWarning
+    )
+
+if not DEBUG and not SENDGRID_API_KEY and (not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD):
+    raise ValueError(
+        "Production email configuration requires EMAIL_HOST_USER and EMAIL_HOST_PASSWORD, "
+        "or SENDGRID_API_KEY with SENDGRID_USE_SENDGRID_BACKEND enabled."
     )
 
 # Static files

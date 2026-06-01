@@ -2,12 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import logout, authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
+from django.db import models
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import User, Referral
+from .signals import generate_unique_referral_code
 from .serializers import RegisterSerializer, UserSerializer
 from .otp_utils import create_and_send_otp, verify_otp
 import logging
@@ -116,6 +118,13 @@ def dashboard(request):
     
     # Get recent transactions - prefetch related objects
     recent_transactions = Transaction.objects.filter(user=request.user).select_related('wallet').order_by('-created_at')[:5]
+
+    # Referral stats
+    referred_count = request.user.referrals.count()
+    referral_reward_total = request.user.referrer_relationships.aggregate(total=models.Sum('reward_amount'))['total'] or 0
+    recent_referred_users = request.user.referrals.order_by('-created_at')[:5]
+    active_referred_count = request.user.referrals.filter(current_plan_level__gt=0).count()
+    referral_conversion_rate = round((active_referred_count / referred_count * 100), 1) if referred_count else 0
     
     context = {
         'balance': balance,
@@ -123,8 +132,32 @@ def dashboard(request):
         'completed_tasks': completed_tasks,
         'unread_notifications': unread_notifications,
         'recent_transactions': recent_transactions,
+        'referred_count': referred_count,
+        'referral_reward_total': referral_reward_total,
+        'recent_referred_users': recent_referred_users,
+        'referral_conversion_rate': referral_conversion_rate,
     }
     return render(request, "dashboard.html", context)
+
+@login_required
+def referral_details_page(request):
+    referrals = Referral.objects.filter(referrer=request.user).select_related('referred_user').order_by('-created_at')
+    referred_count = referrals.count()
+    referral_reward_total = referrals.aggregate(total=models.Sum('reward_amount'))['total'] or 0
+    active_referred_count = referrals.filter(referred_user__current_plan_level__gt=0).count()
+    rewarded_count = referrals.filter(is_active=False, reward_amount__gt=0).count()
+    pending_count = referred_count - rewarded_count
+    referral_conversion_rate = round((active_referred_count / referred_count * 100), 1) if referred_count else 0
+
+    return render(request, "accounts/referrals.html", {
+        'referrals': referrals,
+        'referred_count': referred_count,
+        'referral_reward_total': referral_reward_total,
+        'active_referred_count': active_referred_count,
+        'rewarded_count': rewarded_count,
+        'pending_count': pending_count,
+        'referral_conversion_rate': referral_conversion_rate,
+    })
 
 @login_required
 def wallet_page(request):
@@ -169,20 +202,25 @@ def wallet_page(request):
 
 @login_required
 def profile_page(request):
+    if not request.user.referral_code:
+        request.user.referral_code = generate_unique_referral_code()
+        request.user.save(update_fields=['referral_code'])
     return render(request, "profile.html")
 
 def register_page(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
     
+    referral_code = request.GET.get('referral_code', '').strip().upper()
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
         confirm_password = request.POST.get('confirm_password', '')
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
+        referral_code = request.POST.get('referral_code', '').strip().upper()
         
-        logger.info(f"SIGNUP DATA: email={email}, first_name={first_name}, last_name={last_name}")
+        logger.info(f"SIGNUP DATA: email={email}, first_name={first_name}, last_name={last_name}, referral_code={referral_code}")
         
         error = None
         if not first_name or len(first_name) < 2:
@@ -197,6 +235,8 @@ def register_page(request):
             error = 'Passwords do not match.'
         elif User.objects.filter(email=email).exists():
             error = 'An account with this email already exists.'
+        elif referral_code and not User.objects.filter(referral_code=referral_code).exists():
+            error = 'Referral code is invalid.'
 
         if error:
             return render(request, "accounts/register.html", {
@@ -204,15 +244,26 @@ def register_page(request):
                 'first_name': first_name,
                 'last_name': last_name,
                 'email': email,
+                'referral_code': referral_code,
             })
 
         try:
+            referral_user = None
+            if referral_code:
+                referral_user = User.objects.filter(referral_code=referral_code).first()
+
             user = User.objects.create_user(
                 email=email,
                 password=password,
                 first_name=first_name,
                 last_name=last_name
             )
+
+            if referral_user:
+                user.referred_by = referral_user
+                user.save(update_fields=['referred_by'])
+                Referral.objects.create(referrer=referral_user, referred_user=user)
+
             logger.info(f"USER CREATED: {user.email}")
             # Wallet is automatically created by signal in accounts.signals
 
@@ -227,6 +278,7 @@ def register_page(request):
                 'first_name': first_name,
                 'last_name': last_name,
                 'email': email,
+                'referral_code': referral_code,
             })
         except Exception as e:
             logger.error(f"SIGNUP ERROR: {str(e)}")
@@ -235,9 +287,10 @@ def register_page(request):
                 'first_name': first_name,
                 'last_name': last_name,
                 'email': email,
+                'referral_code': referral_code,
             })
     
-    return render(request, "accounts/register.html")
+    return render(request, "accounts/register.html", {'referral_code': referral_code})
 
 def login_page(request):
     if request.user.is_authenticated:

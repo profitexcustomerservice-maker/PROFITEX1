@@ -6,20 +6,23 @@
 </div>
 
 <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div style="display: flex; gap: 12px; align-items: center;">
-            <select id="filter-type"
-                style="padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+    <div class="page-controls">
+        <div class="filter-group">
+            <label for="filter-type" class="form-label">Plan type</label>
+            <select id="filter-type" class="form-select">
                 <option value="">All Types</option>
                 <option value="basic">Basic</option>
                 <option value="silver">Silver</option>
                 <option value="gold">Gold</option>
+                <option value="platinum">Platinum</option>
             </select>
         </div>
-        <button class="primary" onclick="showCreatePlanModal()">+ Create Plan</button>
+        <div class="action-group">
+            <button class="primary" onclick="showCreatePlanModal()"><i class="fas fa-plus"></i> Create Plan</button>
+        </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;" id="plans-grid">
+    <div id="plans-grid" class="plans-grid">
         <div class="loading">Loading plans...</div>
     </div>
 </div>
@@ -33,60 +36,55 @@
         </div>
         <div class="modal-body">
             <form id="plan-form">
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Title</label>
-                    <input type="text" name="title" required
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" name="title" required class="form-input">
                 </div>
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Description</label>
-                    <textarea name="description" rows="3"
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);"></textarea>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" rows="3" class="form-textarea"></textarea>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Plan Type</label>
-                        <select name="plan_level" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <div class="form-group">
+                    <label class="form-label">Badge Label</label>
+                    <input type="text" name="badge_text" placeholder="Most popular, Best value, ..." class="form-input">
+                </div>
+                <div class="grid-2cols">
+                    <div class="form-group">
+                        <label class="form-label">Plan Type</label>
+                        <select name="plan_level" required class="form-select">
                             <option value="1">Basic (Level 1)</option>
                             <option value="2">Silver (Level 2)</option>
                             <option value="3">Gold (Level 3)</option>
                             <option value="4">Platinum (Level 4)</option>
                         </select>
-                        <div id="plan-level-warning" style="display:none; color:#d9534f; font-size:0.9rem; margin-top:8px;">This plan level already exists. Choose a different level.</div>
+                        <div id="plan-level-warning" class="form-warning">This plan level already exists. Choose a different level.</div>
                     </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Price ($)</label>
-                        <input type="number" name="amount" step="0.01" min="0" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Reward Multiplier</label>
-                        <input type="number" name="reward_multiplier" step="0.1" min="1" value="1" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
-                    </div>
-                    <div>
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600">Daily Earning Limit
-                            ($)</label>
-                        <input type="number" name="daily_earning_limit" step="0.01" min="0" value="50" required
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                    <div class="form-group">
+                        <label class="form-label">Price ($)</label>
+                        <input type="number" name="amount" step="0.01" min="0" required class="form-input">
                     </div>
                 </div>
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Max Tasks Per Day</label>
-                    <input type="number" name="max_tasks_per_day" min="1" value="10" required
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <div class="grid-2cols">
+                    <div class="form-group">
+                        <label class="form-label">Reward Multiplier</label>
+                        <input type="number" name="reward_multiplier" step="0.1" min="1" value="1" required class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Daily Earning Limit ($)</label>
+                        <input type="number" name="daily_earning_limit" step="0.01" min="0" value="50" required class="form-input">
+                    </div>
                 </div>
-                <div style="margin-bottom: 24px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Duration (days)</label>
-                    <input type="number" name="duration" min="1" value="30" required
-                        style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                <div class="form-group">
+                    <label class="form-label">Max Tasks Per Day</label>
+                    <input type="number" name="max_tasks_per_day" min="1" value="10" required class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Duration (days)</label>
+                    <input type="number" name="duration" min="1" value="30" required class="form-input">
                 </div>
                 <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button type="button" onclick="closePlanModal()">Cancel</button>
-                    <button type="submit" class="primary">Save Plan</button>
+                    <button type="button" onclick="closePlanModal()"><i class="fas fa-times"></i> Cancel</button>
+                    <button type="submit" class="primary"><i class="fas fa-save"></i> Save Plan</button>
                 </div>
             </form>
         </div>
@@ -157,85 +155,179 @@
         color: var(--text);
     }
 
+    .page-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 220px;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .form-label {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .button-icon,
+    .tag-icon {
+        margin-right: 8px;
+        font-size: 0.9rem;
+    }
+
+    .form-select,
+    .form-input,
+    .form-textarea {
+        width: 100%;
+        padding: 12px 14px;
+        background: var(--bg-main);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        color: var(--text);
+        font-size: 0.95rem;
+        transition: border-color var(--transition), background var(--transition);
+    }
+
+    .form-select:focus,
+    .form-input:focus,
+    .form-textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+    .grid-2cols {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    .form-warning {
+        display: none;
+        color: var(--danger);
+        font-size: 0.9rem;
+        margin-top: 8px;
+    }
+
+    .plans-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
     .plan-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        padding: 24px;
+        border-radius: var(--radius-xl);
+        padding: 26px;
         box-shadow: var(--shadow-sm);
-        transition: var(--transition);
-        position: relative;
-        overflow: hidden;
+        transition: transform var(--transition), box-shadow var(--transition);
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
     }
 
     .plan-card:hover {
+        transform: translateY(-4px);
         box-shadow: var(--shadow-lg);
-        transform: translateY(-2px);
     }
 
     .plan-card.basic {
-        border-top: 4px solid var(--info);
+        border-left: 4px solid var(--info);
     }
 
     .plan-card.silver {
-        border-top: 4px solid var(--text-secondary);
-    }
-
-    .plan-card.platinum {
-        border-top: 4px solid #8b5cf6;
+        border-left: 4px solid var(--text-secondary);
     }
 
     .plan-card.gold {
-        border-top: 4px solid var(--warning);
+        border-left: 4px solid var(--warning);
     }
 
-    .plan-type-badge {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
+    .plan-card.platinum {
+        border-left: 4px solid #8b5cf6;
     }
 
-    .plan-card.basic .plan-type-badge {
-        background: var(--info-light);
-        color: var(--info);
-    }
-
-    .plan-card.silver .plan-type-badge {
-        background: var(--text-muted);
-        color: white;
-    }
-
-    .plan-card.gold .plan-type-badge {
-        background: var(--warning-light);
-        color: var(--warning);
+    .plan-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 18px;
     }
 
     .plan-title {
-        font-size: 1.25rem;
+        font-size: 1.35rem;
         font-weight: 700;
-        margin-bottom: 8px;
+        margin: 0;
+        color: var(--text);
+        line-height: 1.2;
+    }
+
+    .plan-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+    }
+
+    .plan-badge i,
+    .plan-highlight i,
+    .subscription-badge i,
+    .plan-tag i {
+        margin-right: 6px;
+        font-size: 0.85rem;
     }
 
     .plan-price {
         font-size: 2rem;
-        font-weight: 700;
+        font-weight: 800;
         color: var(--primary);
-        margin-bottom: 16px;
+        margin: 0;
     }
 
     .plan-price span {
-        font-size: 1rem;
+        display: block;
+        font-size: 0.9rem;
         color: var(--text-secondary);
-        font-weight: 400;
+        font-weight: 500;
+        margin-top: 6px;
+    }
+
+    .plan-description {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.7;
+        margin: 0 0 22px;
     }
 
     .plan-features {
-        margin: 20px 0;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 22px;
         padding: 20px 0;
         border-top: 1px solid var(--border-light);
         border-bottom: 1px solid var(--border-light);
@@ -244,31 +336,68 @@
     .plan-feature {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-        font-size: 0.875rem;
+        gap: 10px;
+        font-size: 0.92rem;
+        color: var(--text);
     }
 
     .plan-feature svg {
         width: 18px;
         height: 18px;
         color: var(--success);
+        flex-shrink: 0;
     }
 
     .plan-actions {
         display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: auto;
+    }
+
+    .plan-highlight {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        background: rgba(124, 58, 237, 0.12);
+        color: var(--primary);
+        margin-bottom: 20px;
+        width: fit-content;
+    }
+
+    .plan-card.gold .plan-highlight {
+        background: rgba(245, 158, 11, 0.12);
+        color: var(--warning);
+    }
+
+    .plan-card.platinum .plan-highlight {
+        background: rgba(124, 58, 237, 0.16);
+        color: #8b5cf6;
+    }
+
+    .plan-card.silver .plan-highlight {
+        background: rgba(148, 163, 184, 0.12);
+        color: var(--text-secondary);
+    }
+
+    .plan-card.basic .plan-highlight {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-secondary);
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
         gap: 8px;
-        margin-top: 16px;
-    }
-
-    label {
-        font-size: 0.875rem;
-    }
-
-    input,
-    select,
-    textarea {
-        font-size: 0.875rem;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        background: rgba(16, 185, 129, 0.12);
+        color: var(--success);
     }
 </style>
 
@@ -308,10 +437,10 @@
     }
 
     function getPlanMeta(planLevel) {
-        if (planLevel === 4) return { cls: 'platinum', name: 'Platinum' };
-        if (planLevel === 3) return { cls: 'gold',     name: 'Gold'     };
-        if (planLevel === 2) return { cls: 'silver',   name: 'Silver'   };
-        return { cls: 'basic', name: 'Basic' };
+        if (planLevel === 4) return { cls: 'platinum', name: 'Platinum', highlight: 'Best value' };
+        if (planLevel === 3) return { cls: 'gold',     name: 'Gold',     highlight: 'Most popular' };
+        if (planLevel === 2) return { cls: 'silver',   name: 'Silver',   highlight: '' };
+        return { cls: 'basic', name: 'Basic', highlight: '' };
     }
 
     function renderPlans(plans) {
@@ -321,13 +450,19 @@
             return;
         }
         container.innerHTML = plans.map(plan => {
-            const { cls, name } = getPlanMeta(plan.plan_level);
+            const { cls, name, highlight } = getPlanMeta(plan.plan_level);
+            const label = plan.badge_text?.trim() || highlight;
             return `
             <div class="plan-card ${cls}">
-                <span class="plan-type-badge">${name}</span>
-                <h3 class="plan-title">${plan.title || 'Untitled Plan'}</h3>
-                <div class="plan-price">$${plan.amount || '0'}<span>/join</span></div>
-                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px;">${plan.description || 'No description'}</p>
+                <div class="plan-header">
+                    <div>
+                        <span class="plan-badge"><i class="fas fa-award"></i>${name}</span>
+                        <h3 class="plan-title">${plan.title || 'Untitled Plan'}</h3>
+                    </div>
+                    <div class="plan-price">$${plan.amount || '0'}<span>/join</span></div>
+                </div>
+                ${label ? `<div class="plan-highlight"><i class="fas fa-tag"></i>${label}</div>` : ''}
+                <p class="plan-description">${plan.description || 'No description provided.'}</p>
                 <div class="plan-features">
                     <div class="plan-feature">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
@@ -345,14 +480,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
                         <span>Duration: ${plan.duration_days || 30} days</span>
                     </div>
-                    <div class="plan-feature">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
-                        <span>Status: ${plan.active ? '✅ Active' : '❌ Inactive'}</span>
-                    </div>
                 </div>
                 <div class="plan-actions">
-                    <button onclick="editPlan('${plan.id}')" style="flex: 1;">Edit</button>
-                    <button onclick="deletePlan('${plan.id}')" class="danger" style="flex: 1;">Delete</button>
+                    <button type="button" class="primary"><i class="fas fa-edit"></i> Edit</button>
+                    <button type="button" class="danger"><i class="fas fa-trash-alt"></i> Delete</button>
                 </div>
             </div>
         `;
@@ -376,6 +507,7 @@
             const form = document.getElementById('plan-form');
             form.querySelector('[name="title"]').value = plan.title || '';
             form.querySelector('[name="description"]').value = plan.description || '';
+            form.querySelector('[name="badge_text"]').value = plan.badge_text || '';
 
             form.querySelector('[name="plan_level"]').value = plan.plan_level || 1;
             form.querySelector('[name="amount"]').value = plan.amount || '';
@@ -449,6 +581,7 @@
         const data = {
             title: formData.get('title'),
             description: formData.get('description'),
+            badge_text: formData.get('badge_text') || '',
             plan_level: planLevel,
             amount: parseFloat(formData.get('amount')),
             reward_multiplier: parseFloat(formData.get('reward_multiplier')),

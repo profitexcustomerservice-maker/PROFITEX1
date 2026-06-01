@@ -219,6 +219,12 @@ class UserPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
             self.request.user.save(update_fields=["current_plan_level"])
 
             try:
+                from accounts.signals import apply_referral_reward_to_referrer
+                apply_referral_reward_to_referrer(self.request.user)
+            except Exception:
+                pass
+
+            try:
                 Notification.objects.create(
                     user=self.request.user,
                     title="Plan joined",

@@ -169,12 +169,31 @@
     margin-bottom: 16px;
     border-radius: 12px;
     overflow: hidden;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .task-media img,
-.task-media video {
+.task-media video,
+.task-thumbnail {
     width: 100%;
+    height: auto;
     border-radius: 12px;
+    object-fit: cover;
+}
+
+.task-thumbnail-placeholder {
+    padding: 40px 16px;
+    color: rgba(255, 255, 255, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.95rem;
+    min-height: 180px;
 }
 
 .task-btn {
@@ -708,20 +727,45 @@ window.addEventListener('DOMContentLoaded', () => {
             .then(data => {
                 if (data.results && data.results.length > 0) {
                     taskList.innerHTML = data.results.map(task => {
-                        const media = task.media ? `
-                            <div class="task-media">
-                                ${task.media_type === 'video' 
-                                    ? `<video controls><source src="${task.media}" type="video/mp4"></video>` 
-                                    : `<img src="${task.media}" alt="${task.title}">`}
-                            </div>
-                        ` : '';
                         window.loadedTasksMap[task.id] = task;
+                        let thumbnailHtml = '';
+                        if (task.thumbnail_url) {
+                            thumbnailHtml = `
+                                <div class="task-media">
+                                    <img src="${task.thumbnail_url}" alt="${task.title}" class="task-thumbnail">
+                                </div>
+                            `;
+                        } else if (task.media && task.media_type === 'video') {
+                            thumbnailHtml = `
+                                <div class="task-media">
+                                    <video controls muted preload="metadata" poster="" class="task-thumbnail">
+                                        <source src="${task.media}" type="video/mp4">
+                                        Your browser does not support video playback.
+                                    </video>
+                                </div>
+                            `;
+                        } else if (task.media) {
+                            thumbnailHtml = `
+                                <div class="task-media">
+                                    <img src="${task.media}" alt="${task.title}" class="task-thumbnail">
+                                </div>
+                            `;
+                        } else {
+                            thumbnailHtml = `
+                                <div class="task-media task-thumbnail-placeholder">
+                                    <i class="fas fa-image" style="font-size: 2.2rem; margin-bottom: 12px;"></i>
+                                    No task thumbnail available
+                                </div>
+                            `;
+                        }
+
                         return `
                             <div class="task-card">
                                 <div class="task-header">
                                     <span class="task-type ${task.task_type.toLowerCase()}">${task.task_type}</span>
                                     <span class="task-reward">$${task.reward}</span>
                                 </div>
+                                ${thumbnailHtml}
                                 <h3 class="task-title">${task.title}</h3>
                                 <p class="task-description">${task.description}</p>
                                 <div class="task-meta">
@@ -730,7 +774,6 @@ window.addEventListener('DOMContentLoaded', () => {
                                         <span>${task.duration} min</span>
                                     </div>
                                 </div>
-                                ${media}
                                 <button class="task-btn" onclick="openTaskModal(${task.id})">
                                     <span class="btn-text">Start Task</span>
                                     <div class="spinner"></div>

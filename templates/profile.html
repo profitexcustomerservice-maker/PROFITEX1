@@ -247,6 +247,24 @@
             </form>
             <div id="profile-response" class="response-message"></div>
         </div>
+
+        <div class="profile-card">
+            <h3 class="card-title">
+                <i class="fas fa-share-alt"></i>
+                Referral Code
+            </h3>
+            <p style="font-size: 1rem; color: #4a5568; margin-bottom: 16px;">
+                Share this code with friends so they can sign up using your referral.
+            </p>
+            <div class="form-group">
+                <label>Your Referral Code</label>
+                <input type="text" value="{{ user.referral_code|default:'Not available yet' }}" disabled>
+            </div>
+            <div class="form-group">
+                <label>Referral Link</label>
+                <input type="text" value="/register/?referral_code={{ user.referral_code }}" disabled>
+            </div>
+        </div>
     </div>
 </div>
 

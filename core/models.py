@@ -71,6 +71,7 @@ class Plan(models.Model):
     )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    badge_text = models.CharField(max_length=64, blank=True, null=True, help_text="Optional badge label such as Best value or Most popular")
     amount = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 

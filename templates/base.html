@@ -1109,6 +1109,11 @@
             </button>
             {% endif %}
 
+            <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+                <span class="theme-toggle-label">Dark</span>
+            </button>
+
             <div class="user-dropdown">
                 <button class="user-btn" onclick="toggleUserDropdown()">
                     <div class="user-avatar">
@@ -1455,6 +1460,7 @@ function setActiveNavLink() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+    applySavedTheme();
     setActiveNavLink();
     
     // Only load authenticated user data if a session exists
@@ -1464,6 +1470,33 @@ window.addEventListener('DOMContentLoaded', () => {
         loadNotificationCount();
     }
 });
+
+function applySavedTheme() {
+    const savedTheme = localStorage.getItem('profitex_theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = savedTheme || (prefersDark ? 'dark' : 'dark');
+    setTheme(theme);
+}
+
+function setTheme(theme) {
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(`${theme}-mode`);
+    const button = document.getElementById('theme-toggle-btn');
+    if (button) {
+        const icon = theme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        const label = theme === 'dark' ? 'Dark' : 'Light';
+        button.innerHTML = `${icon}<span class="theme-toggle-label">${label}</span>`;
+        button.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    }
+}
+
+function toggleTheme() {
+    const isDark = document.body.classList.contains('dark-mode');
+    const theme = isDark ? 'light' : 'dark';
+    setTheme(theme);
+    localStorage.setItem('profitex_theme', theme);
+    showToast(`Switched to ${theme === 'dark' ? 'dark' : 'light'} mode.`, 'info', 2000);
+}
 
 // Global Toast Notification System
 function showToast(message, type = 'info', duration = 4000) {

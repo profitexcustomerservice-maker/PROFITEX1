@@ -29,6 +29,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_admin = models.BooleanField(default=False, db_index=True)
     current_plan_level = models.PositiveSmallIntegerField(default=0, db_index=True, help_text="Current plan level (0=None, 1-4)")
     profile_image = models.ImageField(upload_to="profile_images/", blank=True, null=True)
+    referral_code = models.CharField(max_length=20, unique=True, db_index=True, null=True, blank=True, help_text="Unique referral code for this user")
+    referred_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='referrals', help_text="User who referred this user")
     created_at = models.DateTimeField(auto_now_add=True)
     last_active = models.DateTimeField(null=True, blank=True)
     last_rewarded_at = models.DateTimeField(null=True, blank=True)
@@ -103,3 +105,25 @@ class SocialLink(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class Referral(models.Model):
+    """Track referral relationships and rewards"""
+    referrer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrer_relationships')
+    referred_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral_relationships')
+    reward_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Reward given to referrer")
+    is_active = models.BooleanField(default=True, help_text="Is the referral active/valid")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['referrer', 'is_active']),
+            models.Index(fields=['referred_user']),
+        ]
+        verbose_name = "Referral"
+        verbose_name_plural = "Referrals"
+    
+    def __str__(self):
+        return f"{self.referrer.email} referred {self.referred_user.email}"

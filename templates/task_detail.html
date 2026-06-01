@@ -2,10 +2,10 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h2 id="task-title" class="card-title">Loading task...</h2>
+        <h2 id="task-title" class="card-title">Loading task details...</h2>
     </div>
     <div id="task-content">
-        <div class="loading">Loading task details...</div>
+        <div class="loading">Preparing task details for you...</div>
     </div>
 </div>
 
@@ -25,7 +25,7 @@
                     <!-- Dynamic form based on task type -->
                 </div>
                 <div style="text-align: center; margin-top: 24px;">
-                    <button id="complete-btn" onclick="completeTask()">Complete Task</button>
+                    <button id="complete-btn" onclick="completeTask()">Mark as Complete</button>
                 </div>
             </div>
         </div>
@@ -198,7 +198,7 @@ function loadTaskDetail() {
         })
         .catch(error => {
             document.getElementById('task-content').innerHTML = 
-                '<div class="error">Error loading task. Please try again.</div>';
+                '<div class="error">Unable to load task details. Refresh the page to retry.</div>';
         });
 }
 
@@ -212,7 +212,7 @@ function displayTaskDetail(task) {
             <p><strong>Required Duration:</strong> ${task.required_duration} seconds</p>
             ${task.premium_only ? '<p style="color: var(--danger); font-weight: 600;">⭐ Premium Task Only</p>' : ''}
             <p><strong>Description:</strong></p>
-            <p>${task.description || 'No description available'}</p>
+            <p>${task.description || 'Description not provided.'}</p>
         </div>
     `;
     
@@ -260,7 +260,7 @@ function displayTaskDetail(task) {
                         }
                     </div>
                 ` : ''}
-                <button onclick="startTimer()">Start Studying</button>
+                <button onclick="startTimer()">Begin Study Session</button>
             </div>
         `;
     }
@@ -276,7 +276,7 @@ function displayTaskDetail(task) {
 
 function generateSurveyForm(surveyData) {
     if (!surveyData || Object.keys(surveyData).length === 0) {
-        return '<div class="error">No survey questions available.</div>';
+        return '<div class="error">Survey data is not available.</div>';
     }
     
     let form = '<div class="survey-container"><h3>Survey Questions</h3>';
@@ -331,14 +331,14 @@ function setupCompletionForm() {
     } else if (currentTask.task_type === 'advertise') {
         formContainer.innerHTML = `
             <div style="text-align: center;">
-                <p>Confirm you have viewed the advertisement for at least ${currentTask.required_duration} seconds.</p>
+                <p>Confirm you viewed the advertisement for the required duration.</p>
                 <p><strong>Time spent:</strong> <span id="advertise-time">0</span> seconds</p>
             </div>
         `;
     } else if (currentTask.task_type === 'study') {
         formContainer.innerHTML = `
             <div style="text-align: center;">
-                <p>Confirm you have studied the content for at least ${currentTask.required_duration} seconds.</p>
+                <p>Confirm you studied the content for the required duration.</p>
                 <p><strong>Time spent:</strong> <span id="study-time">0</span> seconds</p>
             </div>
         `;
@@ -350,7 +350,7 @@ function startTimer() {
     
     startTime = Date.now();
     timerInterval = setInterval(updateTimer, 1000);
-    showToast('Timer started!', 'info');
+    showToast('Timer started.', 'info');
 }
 
 function stopTimer() {
@@ -434,7 +434,7 @@ function displayTaskDetail(task) {
 
                 <button class="btn btn-lg btn-primary btn-block" style="padding: 12px; margin: 16px 0;" 
                         onclick="openTaskLink('${task.ad_url}', '${currentSubmissionId}')">
-                    <i class="fas fa-external-link-alt"></i> Open Link & Start Timer
+                    <i class="fas fa-external-link-alt"></i> Open link and start timer
                 </button>
             ` : ''}
 
@@ -506,7 +506,7 @@ function createTaskSubmission() {
 
 function submitTask() {
     if (!currentSubmissionId) {
-        showToast('Please complete the task first', 'warning');
+        showToast('Complete the task before submitting.', 'warning');
         return;
     }
 
@@ -560,31 +560,6 @@ function renderSurveyForm(surveyData) {
     }).join('');
     
     document.getElementById('survey-form').innerHTML = formHtml;
-}
-</script>
-        if (data.success) {
-            showToast(`Task completed successfully! You earned $${data.reward_earned.toFixed(2)}`, 'success');
-            closeModal();
-            // Redirect back to tasks page
-            setTimeout(() => {
-                window.location.href = '/tasks_page/';
-            }, 1500);
-        } else {
-            showToast(data.error || 'Failed to complete task. Please try again.', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error completing task:', error);
-        showToast('Error completing task. Please try again.', 'error');
-    });
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('completion-modal');
-    if (event.target === modal) {
-        closeModal();
-    }
 }
 </script>
 {% endblock %}

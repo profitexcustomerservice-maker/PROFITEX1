@@ -9,9 +9,9 @@ class TaskAdmin(admin.ModelAdmin):
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ("plan_level", "title", "amount", "reward_multiplier", "daily_earning_limit", "active")
+    list_display = ("plan_level", "title", "badge_text", "amount", "reward_multiplier", "daily_earning_limit", "active")
     list_filter = ("active", "plan_level")
-    search_fields = ("title", "description")
+    search_fields = ("title", "description", "badge_text")
 
 @admin.register(UserTask)
 class UserTaskAdmin(admin.ModelAdmin):
